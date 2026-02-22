@@ -346,22 +346,34 @@ def _fetch_github_trending(platform: PlatformConfig) -> list[NewsItem]:
         html = resp.text
         items: list[NewsItem] = []
 
-        # 获取主要描述
+        # 获取 Repository 列表，限制在 <article> 内以防止抓到 Header 里的登录链接
         articles = re.findall(r'<article class="Box-row[^"]*">(.*?)</article>', html, re.DOTALL)
         for i, article in enumerate(articles[:platform.max_items]):
-            href_match = re.search(r'<a\s+href="(/[^/]+/[^"]+)"', article)
-            if not href_match: continue
-            repo_path = href_match.group(1).strip()
+            # 提取 Repo 路径 (e.g., owner/repo)
+            href_match = re.search(r'href="(/[^/]+/[^/]+)"', article)
+            if not href_match:
+                continue
+            repo_path = href_match.group(1).lstrip("/")
             
-            desc_match = re.search(r'<p[^>]*>([^<]+)</p>', article)
+            # 提取描述：精准匹配描述段落
+            # 注意：排除包含 "data-hydro-click" 的标签，那是 GitHub 的埋点
+            desc_match = re.search(r'<p class="col-9 color-fg-muted my-1 pr-4"[^>]*>(.*?)</p>', article, re.DOTALL)
+            if not desc_match:
+                desc_match = re.search(r'<p[^>]*>([^<]+)</p>', article)
+            
             desc = desc_match.group(1).strip() if desc_match else ""
+            desc = _clean_html(desc)
             
+            # 过滤逻辑：如果描述中包含登录字样或 JSON 报错，则丢弃摘要
+            if "Sign in" in desc or "data-hydro-click" in desc or "{" in desc:
+                desc = ""
+
             lang_match = re.search(r'itemprop="programmingLanguage">([^<]+)<', article)
-            lang = lang_match.group(1).strip() if lang_match else "Unknown"
+            lang = lang_match.group(1).strip() if lang_match else ""
 
             items.append(NewsItem(
-                title=repo_path.strip("/"),
-                url=f"https://github.com{repo_path}",
+                title=repo_path,
+                url=f"https://github.com/{repo_path}",
                 platform=platform.name, platform_id=platform.id,
                 rank=i + 1,
                 hot_value=lang,

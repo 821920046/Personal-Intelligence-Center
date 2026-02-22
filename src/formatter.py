@@ -18,6 +18,26 @@ WEWORK_MAX_LENGTH = 4096
 BJT = timezone(timedelta(hours=8))
 
 
+# 平台图标映射
+PLATFORM_ICONS = {
+    "zhihu": "📘",
+    "weibo": "👁️‍🗨️",
+    "baidu": "🔍",
+    "toutiao": "📰",
+    "bilibili": "📺",
+    "douyin": "🎵",
+    "wallstreetcn": "💰",
+    "hackernews": "🧡",
+    "github": "🔨",
+    "reddit": "👽",
+    "producthunt": "🐱",
+    "techcrunch": "⚡",
+    "theverge": "🌐",
+    "reuters": "⚖️",
+    "bbc": "📻"
+}
+
+
 def format_by_keyword(
     keyword_results: dict[str, list[NewsItem]],
     show_rank: bool = True,
@@ -38,7 +58,7 @@ def format_by_keyword(
     for keyword_label, items in keyword_results.items():
         if not items:
             continue
-        lines.append(f"\n---\n🔍 **{keyword_label}** ({len(items)}条)\n")
+        lines.append(f"\n---\n🔥 **{keyword_label}** `({len(items)}条)`\n")
         for item in items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary))
 
@@ -67,11 +87,14 @@ def format_by_platform(
     for platform_id, items in platform_results.items():
         if not items:
             continue
+        
+        icon = PLATFORM_ICONS.get(platform_id.split("-")[0].lower(), "📌")
         display_name = items[0].platform if items else (
             platform_names.get(platform_id, platform_id) if platform_names else platform_id
         )
+        
         display_items = items[:max_per_platform]
-        lines.append(f"\n---\n📌 **{display_name}**\n")
+        lines.append(f"\n---\n{icon} **{display_name}**\n")
         for item in display_items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary))
 
@@ -85,29 +108,33 @@ def _format_item(
     show_hot_value: bool, 
     show_summary: bool = True
 ) -> str:
-    """格式化单条新闻条目"""
+    """格式化单条新闻条目 - 精美 UI 版"""
     parts: list[str] = []
     
-    # 标题行
-    title_line_parts = []
-    if show_rank and item.rank > 0:
-        title_line_parts.append(f"`{item.rank}.`")
+    # 获取平台图标
+    _p_icon = PLATFORM_ICONS.get(item.platform_id.split("-")[0].lower(), "")
+    
+    # 标题行：加粗并增强视觉区分度
+    rank_str = f"`{item.rank}` " if show_rank and item.rank > 0 else ""
+    hot_str = f" `[{item.hot_value}]`" if show_hot_value and item.hot_value else ""
+    
     if show_url and item.url:
-        title_line_parts.append(f"[{item.title}]({item.url})")
+        title_md = f"{rank_str}**[{item.title}]({item.url})**{hot_str}"
     else:
-        title_line_parts.append(f"**{item.title}**")
-    if show_hot_value and item.hot_value:
-        title_line_parts.append(f" `{item.hot_value}`")
+        title_md = f"{rank_str}**{item.title}**{hot_str}"
     
-    parts.append(" ".join(title_line_parts))
+    parts.append(title_md)
     
-    # 摘要行
+    # 摘要行：斜体引用，更紧凑
     if show_summary and item.content:
-        # 清洗摘要，防止过长
+        # 清洗并缩减摘要长度
         summary = item.content.replace("\n", " ").strip()
-        if len(summary) > 150:
-            summary = summary[:147] + "..."
-        parts.append(f"> {summary}")
+        if len(summary) > 130:
+            summary = summary[:127] + "..."
+        if summary:
+            # 增加平台名称前缀提醒来源（如果是按关键词分组时很有用）
+            p_tag = f"*{item.platform}* "
+            parts.append(f"> {p_tag}{summary}")
         
     return "\n".join(parts)
 
