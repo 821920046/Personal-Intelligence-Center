@@ -148,7 +148,7 @@ platforms:
   - id: "reuters-tech"
     name: "Reuters Technology"
     type: "rss"
-    url: "http://feeds.reuters.com/reuters/technologyNews"
+    url: "https://www.reutersagency.com/feed/?best-topics=technology&post_type=best"
     enabled: true
     max_items: 15
 

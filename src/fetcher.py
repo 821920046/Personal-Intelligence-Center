@@ -111,7 +111,12 @@ def _fetch_weibo(platform: PlatformConfig) -> list[NewsItem]:
     """微博热搜"""
     try:
         url = "https://weibo.com/ajax/side/hotSearch"
-        resp = _request_with_retry(url)
+        headers = {
+            "Referer": "https://weibo.com/",
+            "Accept": "application/json, text/plain, */*",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+        resp = _request_with_retry(url, headers=headers)
         data = resp.json()
 
         items: list[NewsItem] = []
@@ -373,11 +378,14 @@ def _fetch_github_trending(platform: PlatformConfig) -> list[NewsItem]:
 def _fetch_reddit(platform: PlatformConfig) -> list[NewsItem]:
     """Reddit Popular"""
     try:
+        # 使用更具体的移动端 UA 绕过 Reddit 屏蔽
+        mobile_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
         resp = _request_with_retry(
             "https://www.reddit.com/r/popular.json?limit=30&t=day",
-            headers={"User-Agent": "TrendPulse/1.0 (GitHub Actions)"}
+            headers={"User-Agent": mobile_ua}
         )
-        posts = resp.json().get("data", {}).get("children", [])
+        data = resp.json()
+        posts = data.get("data", {}).get("children", [])
         
         items: list[NewsItem] = []
         for i, post in enumerate(posts[:platform.max_items]):

@@ -114,26 +114,31 @@ def _format_item(
 
 def _split_to_messages(header: str, lines: list[str]) -> list[str]:
     """
-    将行列表拆分为多条符合长度限制的消息。
+    将行列表拆分为多条符合字节长度限制的消息。
+    注意：企业微信的 4096 限制通常是指字节数（UTF-8 编码）。
     """
     messages: list[str] = []
     current_msg = header
     
-    # 预留分页符号和余量的空间 (约 200 字符)
-    safe_limit = WEWORK_MAX_LENGTH - 200
+    # 企微限制 4096 字节。预留约 100 字节给分页号和末尾空白
+    # 这里的阈值使用字节数进行判定
+    BYTE_LIMIT = 4000 
 
     for line in lines:
-        # 如果单行已经超过限制（极少见），截断它
-        if len(line) > safe_limit:
-            line = line[:safe_limit] + "..."
+        # 预估当前消息加上新行后的字节长度
+        line_with_newline = "\n" + line
+        msg_bytes_len = len(current_msg.encode('utf-8'))
+        line_bytes_len = len(line_with_newline.encode('utf-8'))
             
-        if len(current_msg) + len(line) + 1 > safe_limit:
-            messages.append(current_msg)
+        if msg_bytes_len + line_bytes_len > BYTE_LIMIT:
+            # 如果加上这行就超了，先把手头的发出去
+            if current_msg.strip() != header.strip():
+                messages.append(current_msg)
             current_msg = header + line
         else:
-            current_msg += "\n" + line
+            current_msg += line_with_newline
 
-    if current_msg and current_msg != header:
+    if current_msg and current_msg.strip() != header.strip():
         messages.append(current_msg)
 
     if not messages:
