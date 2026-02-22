@@ -17,50 +17,50 @@ platforms:
   # ================== 🇨🇳 国内热搜 ==================
   - id: "zhihu"
     name: "知乎热榜"
-    type: "newsnow"
+    type: "zhihu"
     enabled: true
     max_items: 20
 
   - id: "weibo"
     name: "微博热搜"
-    type: "newsnow"
+    type: "weibo"
     enabled: true
     max_items: 20
 
   - id: "baidu"
     name: "百度热搜"
-    type: "newsnow"
+    type: "baidu"
     enabled: true
     max_items: 20
 
   - id: "toutiao"
     name: "今日头条"
-    type: "newsnow"
+    type: "toutiao"
     enabled: true
     max_items: 20
 
   - id: "bilibili"
     name: "B站热搜"
-    type: "newsnow"
+    type: "bilibili"
     enabled: true
     max_items: 15
 
   - id: "douyin"
     name: "抖音热搜"
-    type: "newsnow"
+    type: "douyin"
     enabled: true
     max_items: 15
 
   - id: "tieba"
     name: "贴吧热议"
-    type: "newsnow"
+    type: "tieba"
     enabled: false
     max_items: 15
 
   # ================== 🇨🇳 国内财经 ==================
   - id: "wallstreetcn-hot"
     name: "华尔街见闻"
-    type: "newsnow"
+    type: "wallstreetcn"
     enabled: true
     max_items: 15
 
@@ -148,7 +148,7 @@ platforms:
   - id: "reuters-tech"
     name: "Reuters Technology"
     type: "rss"
-    url: "https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best&best-sectors=tech"
+    url: "http://feeds.reuters.com/reuters/technologyNews"
     enabled: true
     max_items: 15
 

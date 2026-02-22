@@ -26,15 +26,6 @@ def format_by_keyword(
 ) -> list[str]:
     """
     将按关键词分组的结果格式化为企业微信 Markdown 消息列表。
-
-    Args:
-        keyword_results: {关键词组标签: [NewsItem, ...]}
-        show_rank: 是否显示排名
-        show_url: 是否显示链接
-        show_hot_value: 是否显示热度
-
-    Returns:
-        格式化后的消息列表（可能因长度限制分为多条）
     """
     if not keyword_results:
         return ["📭 **TrendPulse** - 暂无匹配关键词的热点"]
@@ -42,22 +33,16 @@ def format_by_keyword(
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
 
-    sections: list[str] = []
-
+    # 将所有内容整理成行流
+    lines: list[str] = []
     for keyword_label, items in keyword_results.items():
         if not items:
             continue
-
-        section_lines = [f"\n---\n🔍 **{keyword_label}** ({len(items)}条)\n"]
-
+        lines.append(f"\n---\n🔍 **{keyword_label}** ({len(items)}条)\n")
         for item in items:
-            line = _format_item(item, show_rank, show_url, show_hot_value)
-            section_lines.append(line)
+            lines.append(_format_item(item, show_rank, show_url, show_hot_value))
 
-        sections.append("\n".join(section_lines))
-
-    # 组装并分片
-    return _split_messages(header, sections)
+    return _split_to_messages(header, lines)
 
 
 def format_by_platform(
@@ -70,17 +55,6 @@ def format_by_platform(
 ) -> list[str]:
     """
     将按平台分组的结果格式化为企业微信 Markdown 消息列表。
-
-    Args:
-        platform_results: {平台ID: [NewsItem, ...]}
-        platform_names: {平台ID: 显示名称}
-        show_rank: 是否显示排名
-        show_url: 是否显示链接
-        show_hot_value: 是否显示热度
-        max_per_platform: 每平台最多显示几条
-
-    Returns:
-        Markdown 消息列表
     """
     if not platform_results:
         return ["📭 **TrendPulse** - 暂无热点数据"]
@@ -88,75 +62,65 @@ def format_by_platform(
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
 
-    sections: list[str] = []
-
+    lines: list[str] = []
     for platform_id, items in platform_results.items():
         if not items:
             continue
-
         display_name = items[0].platform if items else (
             platform_names.get(platform_id, platform_id) if platform_names else platform_id
         )
         display_items = items[:max_per_platform]
-
-        section_lines = [f"\n---\n📌 **{display_name}**\n"]
-
+        lines.append(f"\n---\n📌 **{display_name}**\n")
         for item in display_items:
-            line = _format_item(item, show_rank, show_url, show_hot_value)
-            section_lines.append(line)
+            lines.append(_format_item(item, show_rank, show_url, show_hot_value))
 
-        sections.append("\n".join(section_lines))
-
-    return _split_messages(header, sections)
+    return _split_to_messages(header, lines)
 
 
 def _format_item(item: NewsItem, show_rank: bool, show_url: bool, show_hot_value: bool) -> str:
     """格式化单条新闻条目"""
     parts: list[str] = []
-
-    # 排名
     if show_rank and item.rank > 0:
         parts.append(f"`{item.rank}.`")
-
-    # 标题（带链接或纯文本）
     if show_url and item.url:
         parts.append(f"[{item.title}]({item.url})")
     else:
         parts.append(item.title)
-
-    # 热度值
     if show_hot_value and item.hot_value:
         parts.append(f" `{item.hot_value}`")
-
     return " ".join(parts)
 
 
-def _split_messages(header: str, sections: list[str]) -> list[str]:
+def _split_to_messages(header: str, lines: list[str]) -> list[str]:
     """
-    将消息按企业微信长度限制分片。
-    每条消息以 header 开头，尽量多地包含 section，不超过 4096 字符。
+    将行列表拆分为多条符合长度限制的消息。
     """
     messages: list[str] = []
-    current = header
+    current_msg = header
+    
+    # 预留分页符号和余量的空间 (约 200 字符)
+    safe_limit = WEWORK_MAX_LENGTH - 200
 
-    for section in sections:
-        # 检查加上当前 section 后是否超限
-        if len(current) + len(section) > WEWORK_MAX_LENGTH - 50:  # 留 50 字符余量
-            if current.strip() != header.strip():
-                messages.append(current)
-            current = header + section
+    for line in lines:
+        # 如果单行已经超过限制（极少见），截断它
+        if len(line) > safe_limit:
+            line = line[:safe_limit] + "..."
+            
+        if len(current_msg) + len(line) + 1 > safe_limit:
+            messages.append(current_msg)
+            current_msg = header + line
         else:
-            current += section
+            current_msg += "\n" + line
 
-    if current.strip():
-        messages.append(current)
+    if current_msg and current_msg != header:
+        messages.append(current_msg)
 
     if not messages:
-        messages.append(header + "\n📭 暂无数据")
+        return [header + "\n📭 暂无有效内容"]
 
-    # 多条消息时添加分页标记
+    # 加上页码
     if len(messages) > 1:
-        for i, msg in enumerate(messages):
-            messages[i] = msg + f"\n\n📄 ({i + 1}/{len(messages)})"
+        for i in range(len(messages)):
+            messages[i] += f"\n\n📄 ({i+1}/{len(messages)})"
 
     return messages
