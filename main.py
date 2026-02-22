@@ -82,7 +82,12 @@ def main() -> None:
     logger.info("📋 已加载 %d 个平台（%d 个启用）", len(platforms), enabled_count)
 
     # 3. 抓取数据
-    platform_results = fetch_all(platforms)
+    translation_config = config.get("translation", {})
+    platform_results = fetch_all(
+        platforms,
+        translation_enabled=translation_config.get("enabled", True),
+        translation_workers=translation_config.get("max_workers", 5)
+    )
 
     if not platform_results:
         logger.warning("⚠️  所有平台均无数据")
@@ -98,6 +103,8 @@ def main() -> None:
 
     # 4. 关键词过滤
     keyword_config = parse_keywords(CONFIG_DIR / "keywords.txt")
+    
+    show_summary = display_config.get("show_summary", True)
 
     if keyword_config.groups:
         # 有关键词 → 按关键词分组推送
@@ -116,6 +123,7 @@ def main() -> None:
             show_rank=display_config.get("show_rank", True),
             show_url=display_config.get("show_url", True),
             show_hot_value=display_config.get("show_hot_value", True),
+            show_summary=show_summary
         )
     else:
         # 无关键词 → 按平台分组推送全部
@@ -125,6 +133,7 @@ def main() -> None:
             show_url=display_config.get("show_url", True),
             show_hot_value=display_config.get("show_hot_value", True),
             max_per_platform=display_config.get("max_items_per_platform", 10),
+            show_summary=show_summary
         )
 
     # 5. 推送到企业微信

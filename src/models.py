@@ -20,6 +20,7 @@ class NewsItem:
     rank: int = 0                       # 排名（0 = 未排名）
     hot_value: str = ""                 # 热度值（如 "1.2亿"）
     category: str = ""                  # 分类标签（如 "科技"、"财经"）
+    content: str = ""                   # 新增：正文摘要/主要内容
 
     def __post_init__(self) -> None:
         self.title = self.title.strip()

@@ -23,6 +23,7 @@ def format_by_keyword(
     show_rank: bool = True,
     show_url: bool = True,
     show_hot_value: bool = True,
+    show_summary: bool = True,
 ) -> list[str]:
     """
     将按关键词分组的结果格式化为企业微信 Markdown 消息列表。
@@ -33,14 +34,13 @@ def format_by_keyword(
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
 
-    # 将所有内容整理成行流
     lines: list[str] = []
     for keyword_label, items in keyword_results.items():
         if not items:
             continue
         lines.append(f"\n---\n🔍 **{keyword_label}** ({len(items)}条)\n")
         for item in items:
-            lines.append(_format_item(item, show_rank, show_url, show_hot_value))
+            lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary))
 
     return _split_to_messages(header, lines)
 
@@ -52,6 +52,7 @@ def format_by_platform(
     show_url: bool = True,
     show_hot_value: bool = True,
     max_per_platform: int = 10,
+    show_summary: bool = True,
 ) -> list[str]:
     """
     将按平台分组的结果格式化为企业微信 Markdown 消息列表。
@@ -72,23 +73,43 @@ def format_by_platform(
         display_items = items[:max_per_platform]
         lines.append(f"\n---\n📌 **{display_name}**\n")
         for item in display_items:
-            lines.append(_format_item(item, show_rank, show_url, show_hot_value))
+            lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary))
 
     return _split_to_messages(header, lines)
 
 
-def _format_item(item: NewsItem, show_rank: bool, show_url: bool, show_hot_value: bool) -> str:
+def _format_item(
+    item: NewsItem, 
+    show_rank: bool, 
+    show_url: bool, 
+    show_hot_value: bool, 
+    show_summary: bool = True
+) -> str:
     """格式化单条新闻条目"""
     parts: list[str] = []
+    
+    # 标题行
+    title_line_parts = []
     if show_rank and item.rank > 0:
-        parts.append(f"`{item.rank}.`")
+        title_line_parts.append(f"`{item.rank}.`")
     if show_url and item.url:
-        parts.append(f"[{item.title}]({item.url})")
+        title_line_parts.append(f"[{item.title}]({item.url})")
     else:
-        parts.append(item.title)
+        title_line_parts.append(f"**{item.title}**")
     if show_hot_value and item.hot_value:
-        parts.append(f" `{item.hot_value}`")
-    return " ".join(parts)
+        title_line_parts.append(f" `{item.hot_value}`")
+    
+    parts.append(" ".join(title_line_parts))
+    
+    # 摘要行
+    if show_summary and item.content:
+        # 清洗摘要，防止过长
+        summary = item.content.replace("\n", " ").strip()
+        if len(summary) > 150:
+            summary = summary[:147] + "..."
+        parts.append(f"> {summary}")
+        
+    return "\n".join(parts)
 
 
 def _split_to_messages(header: str, lines: list[str]) -> list[str]:

@@ -1,7 +1,5 @@
 """
-数据抓取模块 - 双引擎架构
-Engine A: 直接调用各国内平台原始 API
-Engine B: 国际平台（官方 API / RSS）
+数据抓取模块 - 双引擎架构 (支持摘要与翻译)
 """
 
 from __future__ import annotations
@@ -19,6 +17,7 @@ import feedparser
 import requests
 
 from src.models import NewsItem, PlatformConfig
+from src.translator import translate_batch
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +60,24 @@ def _request_with_retry(
     return None  # type: ignore
 
 
+def _clean_html(text: str) -> str:
+    """去除 HTML 标签"""
+    if not text:
+        return ""
+    # 替换常见换行标签为普通换行
+    text = re.sub(r'<(p|br|div)[^>]*>', '\n', text)
+    # 移除所有标签
+    text = re.sub(r'<[^>]+>', '', text)
+    # 反转义并去空白
+    return unescape(text).strip()
+
+
 # ============================================================
-# Engine A: 国内平台 - 直接调用原始 API
+# Engine A: 国内平台
 # ============================================================
 
 def _fetch_zhihu(platform: PlatformConfig) -> list[NewsItem]:
-    """知乎热榜 - 官方 API"""
+    """知乎热榜"""
     try:
         url = "https://www.zhihu.com/api/v3/feed/topstory/hot-list-web?limit=20&desktop=true"
         resp = _request_with_retry(url)
@@ -80,10 +91,13 @@ def _fetch_zhihu(platform: PlatformConfig) -> list[NewsItem]:
                 continue
             link = target.get("link", {}).get("url", "")
             hot = target.get("metrics_area", {}).get("text", "")
+            # 提取摘要
+            content = target.get("excerpt_area", {}).get("text", "")
 
             items.append(NewsItem(
                 title=title, url=link, platform=platform.name,
                 platform_id=platform.id, rank=i + 1, hot_value=hot,
+                content=content[:200]
             ))
 
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
@@ -94,7 +108,7 @@ def _fetch_zhihu(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_weibo(platform: PlatformConfig) -> list[NewsItem]:
-    """微博热搜 - 移动端 API（更稳定）"""
+    """微博热搜"""
     try:
         url = "https://weibo.com/ajax/side/hotSearch"
         resp = _request_with_retry(url)
@@ -125,24 +139,19 @@ def _fetch_weibo(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_baidu(platform: PlatformConfig) -> list[NewsItem]:
-    """百度热搜 - 从 HTML 中提取嵌入 JSON"""
+    """百度热搜"""
     try:
         url = "https://top.baidu.com/board?tab=realtime"
         resp = _request_with_retry(url)
         html = resp.text
 
-        # 百度热搜将数据嵌入到 <!--s-data:...--> 注释中
         match = re.search(r'<!--s-data:(.*?)-->', html, re.DOTALL)
         if not match:
-            logger.error("❌ [%s] 无法解析页面数据", platform.name)
             return []
 
         data = json.loads(match.group(1))
-        cards = data.get("data", {}).get("cards", [])
-        if not cards:
-            return []
-
-        content = cards[0].get("content", [])
+        content = data.get("data", {}).get("cards", [{}])[0].get("content", [])
+        
         items: list[NewsItem] = []
         for i, entry in enumerate(content[:platform.max_items]):
             if entry.get("isTop"):
@@ -151,10 +160,13 @@ def _fetch_baidu(platform: PlatformConfig) -> list[NewsItem]:
             if not title:
                 continue
             raw_url = entry.get("rawUrl", "") or entry.get("url", "")
+            # 提取描述
+            desc = entry.get("desc", "")
 
             items.append(NewsItem(
                 title=title, url=raw_url, platform=platform.name,
                 platform_id=platform.id, rank=i + 1,
+                content=desc[:200]
             ))
 
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
@@ -165,7 +177,7 @@ def _fetch_baidu(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_toutiao(platform: PlatformConfig) -> list[NewsItem]:
-    """今日头条 - 官方热榜 API"""
+    """今日头条"""
     try:
         url = "https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc"
         resp = _request_with_retry(url)
@@ -193,7 +205,7 @@ def _fetch_toutiao(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_bilibili(platform: PlatformConfig) -> list[NewsItem]:
-    """B站热搜 - 搜索热词 API"""
+    """B站热搜"""
     try:
         url = "https://s.search.bilibili.com/main/hotword?limit=30"
         resp = _request_with_retry(url)
@@ -221,9 +233,8 @@ def _fetch_bilibili(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_douyin(platform: PlatformConfig) -> list[NewsItem]:
-    """抖音热搜 - 需先获取 Cookie"""
+    """抖音热搜"""
     try:
-        # 获取 Cookie
         cookie_resp = requests.get("https://www.douyin.com/", headers={"User-Agent": USER_AGENT}, timeout=10)
         cookies = cookie_resp.headers.get("set-cookie", "")
 
@@ -254,7 +265,7 @@ def _fetch_douyin(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_wallstreetcn(platform: PlatformConfig) -> list[NewsItem]:
-    """华尔街见闻 - 7x24 快讯 API"""
+    """华尔街见闻"""
     try:
         url = "https://api-one.wallstcn.com/apiv1/content/lives?channel=global-channel&limit=30"
         resp = _request_with_retry(url)
@@ -262,9 +273,11 @@ def _fetch_wallstreetcn(platform: PlatformConfig) -> list[NewsItem]:
 
         items: list[NewsItem] = []
         for i, entry in enumerate(data.get("data", {}).get("items", [])[:platform.max_items]):
-            title = entry.get("content_text", "").strip()[:80]
-            if not title:
+            text = entry.get("content_text", "").strip()
+            if not text:
                 continue
+            # 见闻推送内容通常较长，截取前 40 字作为标题
+            title = _clean_html(text)[:60] + "..."
             uri = entry.get("uri", "")
 
             items.append(NewsItem(
@@ -272,6 +285,7 @@ def _fetch_wallstreetcn(platform: PlatformConfig) -> list[NewsItem]:
                 url=f"https://wallstreetcn.com/live/{uri}" if uri else "",
                 platform=platform.name, platform_id=platform.id,
                 rank=i + 1,
+                content=_clean_html(text)
             ))
 
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
@@ -286,7 +300,7 @@ def _fetch_wallstreetcn(platform: PlatformConfig) -> list[NewsItem]:
 # ============================================================
 
 def _fetch_hackernews(platform: PlatformConfig) -> list[NewsItem]:
-    """Hacker News 官方 Firebase API"""
+    """Hacker News"""
     try:
         resp = _request_with_retry("https://hacker-news.firebaseio.com/v0/topstories.json")
         story_ids: list[int] = resp.json()[:platform.max_items]
@@ -295,33 +309,23 @@ def _fetch_hackernews(platform: PlatformConfig) -> list[NewsItem]:
 
         def _get_story(sid: int, rank: int) -> NewsItem | None:
             try:
-                r = _request_with_retry(
-                    f"https://hacker-news.firebaseio.com/v0/item/{sid}.json",
-                    raise_on_fail=False,
-                )
-                if r is None:
-                    return None
+                r = _request_with_retry(f"https://hacker-news.firebaseio.com/v0/item/{sid}.json", raise_on_fail=False)
+                if not r: return None
                 story = r.json()
-                if not story or story.get("type") != "story":
-                    return None
+                if not story or story.get("type") != "story": return None
                 return NewsItem(
                     title=story.get("title", ""),
                     url=story.get("url", f"https://news.ycombinator.com/item?id={sid}"),
                     platform=platform.name, platform_id=platform.id,
                     rank=rank, hot_value=f"{story.get('score', 0)}⬆",
+                    content=f"Written by {story.get('by')} | {story.get('descendants', 0)} comments"
                 )
-            except Exception:
-                return None
+            except Exception: return None
 
         with ThreadPoolExecutor(max_workers=10) as pool:
             futures = {pool.submit(_get_story, sid, i + 1): i for i, sid in enumerate(story_ids)}
-            results: list[tuple[int, NewsItem | None]] = []
-            for future in as_completed(futures):
-                idx = futures[future]
-                results.append((idx, future.result()))
-
-        results.sort(key=lambda x: x[0])
-        items = [item for _, item in results if item is not None]
+            results = sorted([(futures[f], f.result()) for f in as_completed(futures)], key=lambda x: x[0])
+            items = [item for _, item in results if item]
 
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
         return items
@@ -331,47 +335,32 @@ def _fetch_hackernews(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_github_trending(platform: PlatformConfig) -> list[NewsItem]:
-    """GitHub Trending - 页面 HTML 解析"""
+    """GitHub Trending"""
     try:
         resp = _request_with_retry("https://github.com/trending")
         html = resp.text
         items: list[NewsItem] = []
 
-        # 按 article 标签分割
+        # 获取主要描述
         articles = re.findall(r'<article class="Box-row[^"]*">(.*?)</article>', html, re.DOTALL)
-        if not articles:
-            # 备用：按 Box-row 分割
-            articles = html.split('class="Box-row')
-            articles = articles[1:] if len(articles) > 1 else []
-
         for i, article in enumerate(articles[:platform.max_items]):
-            # 提取仓库路径 href="/owner/repo"
             href_match = re.search(r'<a\s+href="(/[^/]+/[^"]+)"', article)
-            if not href_match:
-                continue
+            if not href_match: continue
             repo_path = href_match.group(1).strip()
-            full_name = repo_path.strip("/")
-
-            # 提取描述
-            desc = ""
+            
             desc_match = re.search(r'<p[^>]*>([^<]+)</p>', article)
-            if desc_match:
-                desc = desc_match.group(1).strip()
-
-            # 提取今日 Star
-            stars_today = ""
-            star_match = re.search(r'([\d,]+)\s*stars?\s*today', article, re.IGNORECASE)
-            if star_match:
-                stars_today = star_match.group(1)
-
-            title = f"{full_name}: {desc}" if desc else full_name
+            desc = desc_match.group(1).strip() if desc_match else ""
+            
+            lang_match = re.search(r'itemprop="programmingLanguage">([^<]+)<', article)
+            lang = lang_match.group(1).strip() if lang_match else "Unknown"
 
             items.append(NewsItem(
-                title=title,
+                title=repo_path.strip("/"),
                 url=f"https://github.com{repo_path}",
                 platform=platform.name, platform_id=platform.id,
                 rank=i + 1,
-                hot_value=f"⭐{stars_today} today" if stars_today else "",
+                hot_value=lang,
+                content=desc
             ))
 
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
@@ -382,35 +371,27 @@ def _fetch_github_trending(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_reddit(platform: PlatformConfig) -> list[NewsItem]:
-    """Reddit Popular - 需要合适的 User-Agent"""
+    """Reddit Popular"""
     try:
         resp = _request_with_retry(
             "https://www.reddit.com/r/popular.json?limit=30&t=day",
-            headers={
-                "User-Agent": "TrendPulse/1.0 (GitHub Actions; +https://github.com/821920046/TrendPulse)",
-                "Accept": "application/json",
-            },
+            headers={"User-Agent": "TrendPulse/1.0 (GitHub Actions)"}
         )
-        data = resp.json()
-        posts = data.get("data", {}).get("children", [])
-
+        posts = resp.json().get("data", {}).get("children", [])
+        
         items: list[NewsItem] = []
         for i, post in enumerate(posts[:platform.max_items]):
-            post_data = post.get("data", {})
-            title = post_data.get("title", "").strip()
-            if not title:
-                continue
-            subreddit = post_data.get("subreddit", "")
-            permalink = post_data.get("permalink", "")
-            ups = post_data.get("ups", 0)
-
+            p = post.get("data", {})
+            title = p.get("title", "").strip()
+            if not title: continue
+            ups = p.get("ups", 0)
             items.append(NewsItem(
-                title=f"[r/{subreddit}] {title}",
-                url=f"https://www.reddit.com{permalink}" if permalink else "",
+                title=title,
+                url=f"https://www.reddit.com{p.get('permalink')}",
                 platform=platform.name, platform_id=platform.id,
                 rank=i + 1,
-                hot_value=f"⬆{ups:,}" if ups else "",
-                category=subreddit,
+                hot_value=f"⬆{ups}",
+                content=p.get("selftext", "")[:300] or f"Subreddit: r/{p.get('subreddit')}"
             ))
 
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
@@ -421,11 +402,7 @@ def _fetch_reddit(platform: PlatformConfig) -> list[NewsItem]:
 
 
 def _fetch_rss_generic(platform: PlatformConfig) -> list[NewsItem]:
-    """通用 RSS/Atom Feed 抓取"""
-    if not platform.url:
-        logger.warning("⚠️  [%s] 未配置 RSS URL，跳过", platform.name)
-        return []
-
+    """通用 RSS"""
     try:
         resp = _request_with_retry(platform.url)
         feed = feedparser.parse(resp.content)
@@ -433,14 +410,15 @@ def _fetch_rss_generic(platform: PlatformConfig) -> list[NewsItem]:
         items: list[NewsItem] = []
         for i, entry in enumerate(feed.entries[:platform.max_items]):
             title = unescape(entry.get("title", "")).strip()
-            if not title:
-                continue
-            link = entry.get("link", "")
-
+            if not title: continue
+            # 提取摘要并清洗 HTML
+            summary = _clean_html(entry.get("summary", "") or entry.get("description", ""))
+            
             items.append(NewsItem(
-                title=title, url=link,
+                title=title, url=entry.get("link", ""),
                 platform=platform.name, platform_id=platform.id,
                 rank=i + 1,
+                content=summary[:300]
             ))
 
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
@@ -470,16 +448,17 @@ _FETCHER_MAP: dict[str, Callable[[PlatformConfig], list[NewsItem]]] = {
 }
 
 
-def fetch_all(platforms: list[PlatformConfig], max_workers: int = 6) -> dict[str, list[NewsItem]]:
+def fetch_all(
+    platforms: list[PlatformConfig], 
+    max_workers: int = 6,
+    translation_enabled: bool = False,
+    translation_workers: int = 5
+) -> dict[str, list[NewsItem]]:
     """
-    并发抓取所有已启用平台的热点数据。
-
-    Returns:
-        {平台ID: [NewsItem, ...]} 字典
+    并发抓取所有已启用平台的热点数据，并根据配置进行自动翻译。
     """
     enabled = [p for p in platforms if p.enabled]
     if not enabled:
-        logger.warning("没有启用的平台")
         return {}
 
     logger.info("📡 开始抓取 %d 个平台...", len(enabled))
@@ -488,7 +467,6 @@ def fetch_all(platforms: list[PlatformConfig], max_workers: int = 6) -> dict[str
     def _do_fetch(p: PlatformConfig) -> tuple[str, list[NewsItem]]:
         fetcher_fn = _FETCHER_MAP.get(p.type)
         if not fetcher_fn:
-            logger.error("❌ 未知平台类型: %s (platform=%s)", p.type, p.id)
             return p.id, []
         return p.id, fetcher_fn(p)
 
@@ -496,13 +474,43 @@ def fetch_all(platforms: list[PlatformConfig], max_workers: int = 6) -> dict[str
         futures = {pool.submit(_do_fetch, p): p for p in enabled}
         for future in as_completed(futures):
             try:
-                platform_id, items = future.result()
-                results[platform_id] = items
+                pid, items = future.result()
+                results[pid] = items
             except Exception as e:
-                p = futures[future]
-                logger.error("❌ [%s] 线程异常: %s", p.name, e)
-                results[p.id] = []
+                logger.error("❌ 抓取异常: %s", e)
+
+    # 全量翻译
+    if translation_enabled:
+        _apply_translation(results, translation_workers)
 
     total = sum(len(v) for v in results.values())
     logger.info("📡 抓取完成！共 %d 条数据，来自 %d 个平台", total, len(results))
     return results
+
+
+def _apply_translation(results: dict[str, list[NewsItem]], max_workers: int) -> None:
+    """批量翻译抓取到的内容（标题和摘要）"""
+    all_items: list[NewsItem] = []
+    for items in results.values():
+        all_items.extend(items)
+        
+    if not all_items:
+        return
+
+    # 提取所有文本进行翻译
+    # 逻辑：标题和内容分开队列，以防合并翻译导致错乱
+    title_texts = [it.title for it in all_items]
+    content_texts = [it.content for it in all_items]
+
+    # 并发翻译标题
+    logger.info("🌐 正在翻译新闻标题 (%d 条)...", len(title_texts))
+    translated_titles = translate_batch(title_texts, max_workers)
+    
+    # 并发翻译摘要
+    logger.info("🌐 正在翻译新闻摘要 (%d 条)...", len(content_texts))
+    translated_contents = translate_batch(content_texts, max_workers)
+
+    # 回填结果
+    for i in range(len(all_items)):
+        all_items[i].title = translated_titles[i]
+        all_items[i].content = translated_contents[i]
