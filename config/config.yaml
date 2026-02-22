@@ -1,0 +1,166 @@
+# ============================================================
+# TrendPulse - 配置文件
+# 修改此文件来自定义你的热点订阅
+# ============================================================
+
+# --------------------------------------------------
+# 平台配置 - 选择你想关注的信息源
+# type 类型说明：
+#   newsnow      - 通过 NewsNow API 抓取（国内平台）
+#   hackernews   - Hacker News 官方 API
+#   github       - GitHub Trending 页面解析
+#   reddit       - Reddit 公开 JSON API
+#   producthunt  - Product Hunt RSS
+#   rss          - 通用 RSS/Atom Feed
+# --------------------------------------------------
+platforms:
+  # ================== 🇨🇳 国内热搜 ==================
+  - id: "zhihu"
+    name: "知乎热榜"
+    type: "newsnow"
+    enabled: true
+    max_items: 20
+
+  - id: "weibo"
+    name: "微博热搜"
+    type: "newsnow"
+    enabled: true
+    max_items: 20
+
+  - id: "baidu"
+    name: "百度热搜"
+    type: "newsnow"
+    enabled: true
+    max_items: 20
+
+  - id: "toutiao"
+    name: "今日头条"
+    type: "newsnow"
+    enabled: true
+    max_items: 20
+
+  - id: "bilibili"
+    name: "B站热搜"
+    type: "newsnow"
+    enabled: true
+    max_items: 15
+
+  - id: "douyin"
+    name: "抖音热搜"
+    type: "newsnow"
+    enabled: true
+    max_items: 15
+
+  - id: "tieba"
+    name: "贴吧热议"
+    type: "newsnow"
+    enabled: false
+    max_items: 15
+
+  # ================== 🇨🇳 国内财经 ==================
+  - id: "wallstreetcn-hot"
+    name: "华尔街见闻"
+    type: "newsnow"
+    enabled: true
+    max_items: 15
+
+  - id: "cls-hot"
+    name: "财联社热门"
+    type: "newsnow"
+    enabled: false
+    max_items: 15
+
+  - id: "thepaper"
+    name: "澎湃新闻"
+    type: "newsnow"
+    enabled: false
+    max_items: 15
+
+  - id: "ifeng"
+    name: "凤凰网"
+    type: "newsnow"
+    enabled: false
+    max_items: 15
+
+  # ================== 🌍 科技社区 ==================
+  - id: "hackernews"
+    name: "Hacker News"
+    type: "hackernews"
+    enabled: true
+    max_items: 20
+
+  - id: "producthunt"
+    name: "Product Hunt"
+    type: "producthunt"
+    url: "https://www.producthunt.com/feed"
+    enabled: true
+    max_items: 15
+
+  - id: "github-trending"
+    name: "GitHub Trending"
+    type: "github"
+    enabled: true
+    max_items: 15
+
+  # ================== 🌍 社交媒体 ==================
+  - id: "reddit"
+    name: "Reddit Popular"
+    type: "reddit"
+    enabled: true
+    max_items: 20
+
+  # ================== 🌍 国际媒体 ==================
+  - id: "techcrunch"
+    name: "TechCrunch"
+    type: "rss"
+    url: "https://techcrunch.com/feed/"
+    enabled: true
+    max_items: 15
+
+  - id: "theverge"
+    name: "The Verge"
+    type: "rss"
+    url: "https://www.theverge.com/rss/index.xml"
+    enabled: true
+    max_items: 15
+
+  - id: "arstechnica"
+    name: "Ars Technica"
+    type: "rss"
+    url: "https://feeds.arstechnica.com/arstechnica/index"
+    enabled: true
+    max_items: 15
+
+  - id: "bbc-tech"
+    name: "BBC Technology"
+    type: "rss"
+    url: "https://feeds.bbci.co.uk/news/technology/rss.xml"
+    enabled: true
+    max_items: 15
+
+  - id: "bbc-world"
+    name: "BBC World"
+    type: "rss"
+    url: "https://feeds.bbci.co.uk/news/world/rss.xml"
+    enabled: false
+    max_items: 15
+
+  - id: "reuters-tech"
+    name: "Reuters Technology"
+    type: "rss"
+    url: "https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best&best-sectors=tech"
+    enabled: true
+    max_items: 15
+
+# --------------------------------------------------
+# 显示配置
+# --------------------------------------------------
+display:
+  # 每个平台最多显示几条（未被关键词过滤时生效）
+  max_items_per_platform: 10
+  # 是否显示排名编号
+  show_rank: true
+  # 是否显示热度值
+  show_hot_value: true
+  # 是否显示来源链接
+  show_url: true

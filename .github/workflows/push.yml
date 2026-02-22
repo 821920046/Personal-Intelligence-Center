@@ -1,0 +1,36 @@
+name: TrendPulse - 热点订阅推送
+
+on:
+  # 定时触发（UTC 时间）
+  schedule:
+    # 北京时间 07:00 → UTC 23:00 (前一天)
+    - cron: "0 23 * * *"
+    # 北京时间 18:00 → UTC 10:00
+    - cron: "0 10 * * *"
+
+  # 支持手动触发（调试用）
+  workflow_dispatch:
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 执行推送
+        env:
+          WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL }}
+          WEWORK_MSG_TYPE: ${{ secrets.WEWORK_MSG_TYPE }}
+        run: python main.py
