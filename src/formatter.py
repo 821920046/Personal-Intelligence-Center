@@ -45,23 +45,31 @@ def format_by_keyword(
     show_url: bool = True,
     show_hot_value: bool = True,
     show_summary: bool = True,
+    use_markdown: bool = True,
 ) -> list[str]:
     """
-    将按关键词分组的结果格式化为企业微信 Markdown 消息列表。
+    将按关键词分组的结果格式化为企业微信消息列表。
     """
     if not keyword_results:
-        return ["📭 **TrendPulse** - 暂无匹配关键词的热点"]
+        return ["📭 TrendPulse - 暂无匹配关键词的热点"] if not use_markdown else ["📭 **TrendPulse** - 暂无匹配关键词的热点"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
-    header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+    if use_markdown:
+        header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+    else:
+        header = f"📡 TrendPulse 热点速递\n⏰ {now}\n"
 
     lines: list[str] = []
     for keyword_label, items in keyword_results.items():
         if not items:
             continue
-        lines.append(f"\n---\n🔥 **{keyword_label}** `({len(items)}条)`\n")
+        if use_markdown:
+            lines.append(f"\n---\n🔥 **{keyword_label}** `({len(items)}条)`\n")
+        else:
+            lines.append(f"\n---\n🔥 {keyword_label} ({len(items)}条)\n")
+        
         for item in items:
-            lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary))
+            lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
 
     return _split_to_messages(header, lines)
 
@@ -74,15 +82,19 @@ def format_by_platform(
     show_hot_value: bool = True,
     max_per_platform: int = 10,
     show_summary: bool = True,
+    use_markdown: bool = True,
 ) -> list[str]:
     """
-    将按平台分组的结果格式化为企业微信 Markdown 消息列表。
+    将按平台分组的结果格式化为企业微信消息列表。
     """
     if not platform_results:
-        return ["📭 **TrendPulse** - 暂无热点数据"]
+        return ["📭 TrendPulse - 暂无热点数据"] if not use_markdown else ["📭 **TrendPulse** - 暂无热点数据"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
-    header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+    if use_markdown:
+        header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+    else:
+        header = f"📡 TrendPulse 热点速递\n⏰ {now}\n"
 
     lines: list[str] = []
     for platform_id, items in platform_results.items():
@@ -95,9 +107,13 @@ def format_by_platform(
         )
         
         display_items = items[:max_per_platform]
-        lines.append(f"\n---\n{icon} **{display_name}**\n")
+        if use_markdown:
+            lines.append(f"\n---\n{icon} **{display_name}**\n")
+        else:
+            lines.append(f"\n---\n{icon} {display_name}\n")
+            
         for item in display_items:
-            lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary))
+            lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
 
     return _split_to_messages(header, lines)
 
@@ -120,7 +136,7 @@ def _safe_byte_truncate(text: str, max_bytes: int) -> str:
     
     # 还要去掉起始的那个字节（如果是破碎的）
     if len(truncated_bytes) > 0 and (truncated_bytes[-1] & 0xC0) == 0xC0:
-         truncated_bytes = truncated_bytes[:-1]
+        truncated_bytes = truncated_bytes[:-1]
          
     return truncated_bytes.decode('utf-8', errors='ignore')
 
@@ -130,27 +146,39 @@ def _format_item(
     show_rank: bool, 
     show_url: bool, 
     show_hot_value: bool, 
-    show_summary: bool = True
+    show_summary: bool = True,
+    use_markdown: bool = True
 ) -> str:
-    """格式化单条新闻条目 - 精解 UI 版"""
+    """格式化单条新闻条目 - 支持 Markdown 和 Text 降级"""
     parts: list[str] = []
     
     # 标题行：加粗并增强视觉区分度
-    rank_str = f"`{item.rank}` " if show_rank and item.rank > 0 else ""
-    hot_str = f" `[{item.hot_value}]`" if show_hot_value and item.hot_value else ""
+    if use_markdown:
+        rank_str = f"`{item.rank}` " if show_rank and item.rank > 0 else ""
+        hot_str = f" `[{item.hot_value}]`" if show_hot_value and item.hot_value else ""
+    else:
+        rank_str = f"[{item.rank}] " if show_rank and item.rank > 0 else ""
+        hot_str = f" ({item.hot_value})" if show_hot_value and item.hot_value else ""
     
     # 标题基础清洗：移除所有 HTML 标签并处理换行
     title = re.sub(r'<[^>]+>', '', item.title)
     title = title.replace("\n", " ").strip()
     
     if show_url and item.url:
-        title_md = f"{rank_str}**[{title}]({item.url})**{hot_str}"
+        if use_markdown:
+            title_md = f"{rank_str}**[{title}]({item.url})**{hot_str}"
+        else:
+            # Text 模式下降级显示链接
+            title_md = f"{rank_str}{title}{hot_str} \n🔗 {item.url}"
     else:
-        title_md = f"{rank_str}**{title}**{hot_str}"
+        if use_markdown:
+            title_md = f"{rank_str}**{title}**{hot_str}"
+        else:
+            title_md = f"{rank_str}{title}{hot_str}"
     
     parts.append(title_md)
     
-    # 摘要行：斜体引用，更紧凑
+    # 摘要行
     if show_summary and item.content:
         # 深度清洗摘要，移除可能的 HTML 残留
         summary = re.sub(r'<[^>]+>', '', item.content)
@@ -161,8 +189,11 @@ def _format_item(
             summary = _safe_byte_truncate(summary, 290) + "..."
             
         if summary:
-            p_tag = f"*{item.platform}* "
-            parts.append(f"> {p_tag}{summary}")
+            if use_markdown:
+                p_tag = f"*{item.platform}* "
+                parts.append(f"> {p_tag}{summary}")
+            else:
+                parts.append(f"   └─ {summary}")
         
     return "\n".join(parts)
 

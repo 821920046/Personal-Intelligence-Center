@@ -67,7 +67,9 @@ def main() -> None:
 
     # 1. 读取配置
     webhook_url = os.environ.get("WEWORK_WEBHOOK_URL", "")
-    msg_type = os.environ.get("WEWORK_MSG_TYPE", "markdown")
+    # 兼容微信：默认改为 text 模式
+    msg_type = os.environ.get("WEWORK_MSG_TYPE", "text")
+    use_markdown = (msg_type == "markdown")
 
     if not webhook_url:
         logger.error("❌ 环境变量 WEWORK_WEBHOOK_URL 未设置")
@@ -91,7 +93,7 @@ def main() -> None:
 
     if not platform_results:
         logger.warning("⚠️  所有平台均无数据")
-        messages = ["📭 **TrendPulse** - 本次运行未获取到任何热点数据"]
+        messages = ["📭 TrendPulse - 本次运行未获取到任何热点数据"]
         send_wework(webhook_url, messages, msg_type)
         return
 
@@ -111,7 +113,7 @@ def main() -> None:
         keyword_results = filter_news(all_items, keyword_config)
         if not keyword_results:
             logger.info("📭 无匹配关键词的热点")
-            messages = ["📭 **TrendPulse** - 今日暂无匹配订阅关键词的热点"]
+            messages = ["📭 TrendPulse - 今日暂无匹配订阅关键词的热点"]
             send_wework(webhook_url, messages, msg_type)
             return
 
@@ -123,7 +125,8 @@ def main() -> None:
             show_rank=display_config.get("show_rank", True),
             show_url=display_config.get("show_url", True),
             show_hot_value=display_config.get("show_hot_value", True),
-            show_summary=show_summary
+            show_summary=show_summary,
+            use_markdown=use_markdown
         )
     else:
         # 无关键词 → 按平台分组推送全部
@@ -133,11 +136,12 @@ def main() -> None:
             show_url=display_config.get("show_url", True),
             show_hot_value=display_config.get("show_hot_value", True),
             max_per_platform=display_config.get("max_items_per_platform", 10),
-            show_summary=show_summary
+            show_summary=show_summary,
+            use_markdown=use_markdown
         )
 
     # 5. 推送到企业微信
-    logger.info("📤 准备推送 %d 条消息到企业微信", len(messages))
+    logger.info("📤 准备推送 %d 条消息到企业微信 (模式: %s)", len(messages), msg_type)
     success = send_wework(webhook_url, messages, msg_type)
 
     if success:
