@@ -61,15 +61,25 @@ def _request_with_retry(
 
 
 def _clean_html(text: str) -> str:
-    """去除 HTML 标签"""
+    """去处 HTML 标签及 SVG 干扰"""
     if not text:
         return ""
-    # 替换常见换行标签为普通换行
+    # 1. 深度移除 SVG 块
+    text = re.sub(r'<svg[^>]*>.*?</svg>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # 2. 替换常见换行标签为普通换行
     text = re.sub(r'<(p|br|div)[^>]*>', '\n', text)
-    # 移除所有标签
+    # 3. 移除所有脚本和样式
+    text = re.sub(r'<(script|style)[^>]*>.*?</\1>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # 4. 移除所有标签
     text = re.sub(r'<[^>]+>', '', text)
-    # 反转义并去空白
-    return unescape(text).strip()
+    # 5. 特殊处理：移除连续的多个不可见字符/空白，保留单个空格/换行
+    text = re.sub(r'[ \t\f\v]+', ' ', text)
+    text = re.sub(r'\n\s*\n+', '\n', text)
+    # 6. 反转义并去空白
+    cleaned = unescape(text).strip()
+    # 7. 最终防御：移除可能残留在中间或开头的 HTML 属性片段 (e.g., data-view-component="true" class="...")
+    cleaned = re.sub(r'[a-z0-9\-]+="[^"]*"\s*', ' ', cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
 
 
 # ============================================================
@@ -349,23 +359,28 @@ def _fetch_github_trending(platform: PlatformConfig) -> list[NewsItem]:
         # 获取 Repository 列表，限制在 <article> 内以防止抓到 Header 里的登录链接
         articles = re.findall(r'<article class="Box-row[^"]*">(.*?)</article>', html, re.DOTALL)
         for i, article in enumerate(articles[:platform.max_items]):
-            # 提取 Repo 路径 (e.g., owner/repo)
-            href_match = re.search(r'href="(/[^/]+/[^/]+)"', article)
+            # 提取 Repo 路径 (e.g., owner/repo) - 更加严格，不允匹配中出现引号
+            href_match = re.search(r'href="/([^/"]+/[^/"]+)"', article)
             if not href_match:
                 continue
             repo_path = href_match.group(1).lstrip("/")
             
             # 提取描述：精准匹配描述段落
-            # 注意：排除包含 "data-hydro-click" 的标签，那是 GitHub 的埋点
+            desc = ""
             desc_match = re.search(r'<p class="col-9 color-fg-muted my-1 pr-4"[^>]*>(.*?)</p>', article, re.DOTALL)
-            if not desc_match:
+            if desc_match:
+                desc = desc_match.group(1).strip()
+            else:
+                # 备选方案：尝试找任何非 SVG/Link 容器的 text 内容
                 desc_match = re.search(r'<p[^>]*>([^<]+)</p>', article)
+                if desc_match:
+                    desc = desc_match.group(1).strip()
             
-            desc = desc_match.group(1).strip() if desc_match else ""
+            # 严格过滤清洗
             desc = _clean_html(desc)
             
-            # 过滤逻辑：如果描述中包含登录字样或 JSON 报错，则丢弃摘要
-            if "Sign in" in desc or "data-hydro-click" in desc or "{" in desc:
+            # 风险防御：如果清洗后依然包含明显的源码特征，直接清空
+            if any(x in desc for x in ["<", "{", "data-view-component", "class="]):
                 desc = ""
 
             lang_match = re.search(r'itemprop="programmingLanguage">([^<]+)<', article)

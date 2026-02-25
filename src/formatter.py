@@ -101,6 +101,29 @@ def format_by_platform(
     return _split_to_messages(header, lines)
 
 
+def _safe_byte_truncate(text: str, max_bytes: int) -> str:
+    """
+    字节级安全截断 Unicode 字符串。
+    确保不会在多字节字符中间阶段导致乱码。
+    """
+    encoded = text.encode('utf-8')
+    if len(encoded) <= max_bytes:
+        return text
+    
+    # 截断字节流
+    truncated_bytes = encoded[:max_bytes]
+    # 过滤掉末尾可能破碎的字符字节
+    # UTF-8 中，多字节字符的后续字节都以 10 开头 (0x80 - 0xBF)
+    while len(truncated_bytes) > 0 and (truncated_bytes[-1] & 0xC0) == 0x80:
+        truncated_bytes = truncated_bytes[:-1]
+    
+    # 还要去掉起始的那个字节（如果是破碎的）
+    if len(truncated_bytes) > 0 and (truncated_bytes[-1] & 0xC0) == 0xC0:
+         truncated_bytes = truncated_bytes[:-1]
+         
+    return truncated_bytes.decode('utf-8', errors='ignore')
+
+
 def _format_item(
     item: NewsItem, 
     show_rank: bool, 
@@ -108,31 +131,35 @@ def _format_item(
     show_hot_value: bool, 
     show_summary: bool = True
 ) -> str:
-    """格式化单条新闻条目 - 精美 UI 版"""
+    """格式化单条新闻条目 - 精解 UI 版"""
     parts: list[str] = []
-    
-    # 获取平台图标
-    _p_icon = PLATFORM_ICONS.get(item.platform_id.split("-")[0].lower(), "")
     
     # 标题行：加粗并增强视觉区分度
     rank_str = f"`{item.rank}` " if show_rank and item.rank > 0 else ""
     hot_str = f" `[{item.hot_value}]`" if show_hot_value and item.hot_value else ""
     
+    # 标题基础清洗：移除所有 HTML 标签并处理换行
+    title = re.sub(r'<[^>]+>', '', item.title)
+    title = title.replace("\n", " ").strip()
+    
     if show_url and item.url:
-        title_md = f"{rank_str}**[{item.title}]({item.url})**{hot_str}"
+        title_md = f"{rank_str}**[{title}]({item.url})**{hot_str}"
     else:
-        title_md = f"{rank_str}**{item.title}**{hot_str}"
+        title_md = f"{rank_str}**{title}**{hot_str}"
     
     parts.append(title_md)
     
     # 摘要行：斜体引用，更紧凑
     if show_summary and item.content:
-        # 清洗并缩减摘要长度
-        summary = item.content.replace("\n", " ").strip()
-        if len(summary) > 130:
-            summary = summary[:127] + "..."
+        # 深度清洗摘要，移除可能的 HTML 残留
+        summary = re.sub(r'<[^>]+>', '', item.content)
+        summary = summary.replace("\n", " ").strip()
+        
+        # 安全截断摘要：约 300 字节以内
+        if len(summary.encode('utf-8')) > 300:
+            summary = _safe_byte_truncate(summary, 290) + "..."
+            
         if summary:
-            # 增加平台名称前缀提醒来源（如果是按关键词分组时很有用）
             p_tag = f"*{item.platform}* "
             parts.append(f"> {p_tag}{summary}")
         
@@ -142,26 +169,33 @@ def _format_item(
 def _split_to_messages(header: str, lines: list[str]) -> list[str]:
     """
     将行列表拆分为多条符合字节长度限制的消息。
-    注意：企业微信的 4096 限制通常是指字节数（UTF-8 编码）。
     """
     messages: list[str] = []
     current_msg = header
     
-    # 企微限制 4096 字节。预留约 100 字节给分页号和末尾空白
-    # 这里的阈值使用字节数进行判定
-    BYTE_LIMIT = 4000 
+    # 企微限制 4096 字节。预留安全空间
+    BYTE_LIMIT = 3800 
 
     for line in lines:
-        # 预估当前消息加上新行后的字节长度
         line_with_newline = "\n" + line
         msg_bytes_len = len(current_msg.encode('utf-8'))
         line_bytes_len = len(line_with_newline.encode('utf-8'))
             
         if msg_bytes_len + line_bytes_len > BYTE_LIMIT:
-            # 如果加上这行就超了，先把手头的发出去
+            # 当前消息已接近上限，或者单行本身就巨大
             if current_msg.strip() != header.strip():
                 messages.append(current_msg)
-            current_msg = header + line
+                current_msg = header
+            
+            # 如果单行内容依然超出单条消息的总限制，则由于单行不可分割，进行硬截取
+            if len((header + line_with_newline).encode('utf-8')) > BYTE_LIMIT:
+                remaining_limit = BYTE_LIMIT - len(header.encode('utf-8')) - 10
+                truncated_line = _safe_byte_truncate(line, remaining_limit)
+                current_msg = header + "\n" + truncated_line + " (内容超长已截断)..."
+                messages.append(current_msg)
+                current_msg = header
+            else:
+                current_msg = header + line
         else:
             current_msg += line_with_newline
 
@@ -172,8 +206,9 @@ def _split_to_messages(header: str, lines: list[str]) -> list[str]:
         return [header + "\n📭 暂无有效内容"]
 
     # 加上页码
-    if len(messages) > 1:
-        for i in range(len(messages)):
-            messages[i] += f"\n\n📄 ({i+1}/{len(messages)})"
+    total_pages = len(messages)
+    if total_pages > 1:
+        for i in range(total_pages):
+            messages[i] += f"\n\n📄 ({i+1}/{total_pages})"
 
     return messages
