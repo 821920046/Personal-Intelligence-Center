@@ -148,7 +148,7 @@ platforms:
   - id: "reuters-tech"
     name: "Reuters Technology"
     type: "rss"
-    url: "https://www.reuters.com/arc/outboundfeeds/v1/topic/technology/?size=20"
+    url: "https://www.reuters.com/arc/outboundfeeds/v1/topic/technology/?size=25" # 尝试使用标准出口 Feed
     enabled: true
     max_items: 15
 

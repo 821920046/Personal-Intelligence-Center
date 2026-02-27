@@ -29,8 +29,14 @@ jobs:
       - name: 安装依赖
         run: pip install -r requirements.txt
 
+      - name: 安装浏览器驱动
+        run: playwright install chromium
+
       - name: 执行推送
         env:
           WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL }}
           WEWORK_MSG_TYPE: ${{ secrets.WEWORK_MSG_TYPE }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          BARK_DEVICE_KEY: ${{ secrets.BARK_DEVICE_KEY }}
+          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
         run: python main.py
