@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Playwright](https://img.shields.io/badge/Playwright-抓取增强-45ba4b?logo=playwright&logoColor=white)](https://playwright.dev)
 [![AI Powered](https://img.shields.io/badge/AI-Gemini%20/%20GPT-orange?logo=google-gemini&logoColor=white)]()
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![GitHub Actions](https://img.shields.io/badge/Actions-定时任务-2088FF?logo=github-actions&logoColor=white)]()
 
 ---
 
@@ -13,54 +13,75 @@
 
 本系统不仅是一个爬虫，它更是一个私人的“智能情报大脑”。依托 AI 能力，它实现了从“看到”到“看懂”的跨越。
 
-### 1. 🔍 语义雷达 (Semantic Radar)
-不再死板匹配词条。利用 **向量嵌入 (Embedding)** 技术，即便标题里没有你的关键词，只要意思沾边（例如“氢能”之于“新能源”），系统也会精准捕捉并标记为 `✨ 语义发现`。
-
-### 2. 📖 深度精读 (Deep Reading)
-告别标题党。系统会自动抓取新闻后的网页正文，让 AI 读完几千字后再为你输出一份 300 字的深度提炼。你在消息窗口内，就能掌握整个事件的来龙去脉。
-
-### 3. 🤖 AI 三重提炼 (Tri-Tier Synthesis)
-- **今日洞察 (Daily Insight)**：全网热点的全局综述，一句话看清今日焦点。
-- **组摘要 (Group Summary)**：针对你关心的每个关键词组，生成浓缩动态。
-- **全文综述 (Full-text AI)**：深度精读条目的模块化分析。
-
-### 4. 🌐 强力抓取引擎 (Hybrid Scraper)
-- **双模态架构**：优先轻量 API，失败时自动唤起 **Playwright 无头浏览器**。
-- **全网覆盖**：知乎、微博、GitHub、Hacker News、Reddit、RSS 等 20+ 平台。
-- **自动翻译**：国际资讯全量翻译为中文，消除语言障碍。
-
-### 5. 🎨 绝美可视化看板 (Dashboard)
-每次运行自动生成一个 **Apple 审美风格** 的静态 HTML 报告。完美适配深色模式，让回顾热点成为一种视觉享受。
+- 🔍 **语义雷达 (Semantic Radar)**：利用向量嵌入技术，自动捕捉语义相关的隐藏热点。
+- 📖 **深度精读 (Deep Reading)**：自动抓取正文全文，AI 为你提供 300 字深度提炼。
+- 🤖 **AI 三重综述**：今日洞察、组摘要、全文精读，分层级过滤噪音。
+- 🌐 **强抓取引擎**：Playwright 无头浏览器后备，无视 JS 渲染与常见反爬。
+- 🎨 **绝美看板**：自动生成 Apple 风格 HTML 报告，支持深色模式。
+- 📲 **多端推送**：企业微信、Bark (iOS)、钉钉三端同步。
 
 ---
 
-## 📲 多渠道分发 (Delivery Channels)
+## � 部署指南 (Deployment)
 
-支持同时推送到以下终端：
-- **企业微信 (WeWork)**：Markdown 富文本推送。
-- **Bark (iOS)**：苹果全家桶即时弹窗。
-- **钉钉 (DingTalk)**：群机器人通知。
+### 方案 A：GitHub Actions 自动运行（推荐，零成本，免服务器）
+
+1. **Fork/使用模板**：
+   - 点击右上角 `Use this template` 或 `Fork` 到你的账号。
+2. **配置 Secrets**（重要）：
+   - 进入 GitHub 仓库 `Settings` -> `Secrets and variables` -> `Actions`。
+   - 点击 `New repository secret` 添加以下必要变量：
+     - `AI_API_KEY`: 你的 Google Gemini (推荐，免费额度高) 或 OpenAI API Key。
+     - `WEWORK_WEBHOOK_URL`: 企业微信机器人 Webhook 地址（如使用此渠道）。
+     - `BARK_DEVICE_KEY`: Bark 推送 Key（如使用此渠道）。
+3. **启用 Actions**：
+   - 进入 `Actions` 页面，手动确认 `Enable Actions`。
+   - 默认配置为每天北京时间 **07:00** 和 **18:00** 运行。
+
+### 方案 B：本地手动运行
+
+1. **克隆项目**：
+   ```bash
+   git clone https://github.com/YourUsername/IntelligenceCenter.git
+   cd IntelligenceCenter
+   ```
+2. **安装依赖**：
+   ```bash
+   pip install -r requirements.txt
+   playwright install chromium
+   ```
+3. **配置环境变量**：
+   - 在本地创建 `.env` 文件或直接设置系统环境变量：
+     ```bash
+     export AI_API_KEY="你的KEY"
+     export WEWORK_WEBHOOK_URL="你的URL"
+     ```
+4. **启动程序**：
+   ```bash
+   python main.py
+   ```
 
 ---
 
-## 🚀 快速开始 (Quick Start)
+## 🛠️ 使用教程 (Usage)
 
-### 1️⃣ 环境准备
-```bash
-git clone https://github.com/YourUsername/IntelligenceHub.git
-cd IntelligenceHub
-pip install -r requirements.txt
-playwright install chromium
-```
+### 1. 配置你想看的内容
+编辑 `config/keywords.txt`。支持复杂的匹配语法：
+- **普通词**：`华为 苹果` (命中其一即推送)
+- **必选词**：`+手机` (必须包含)
+- **排除词**：`!水果` (包含则跳过)
+- **数量限制**：`@5` (该组最多推 5 条)
+- **全局过滤**：在 `[GLOBAL_FILTER]` 下填写的词将全局生效。
 
-### 2️⃣ 配置文件
-- `config/keywords.txt`: 填入你关心的关键词。
-- `config/config.yaml`: 配置 API KEY 和通知渠道。
+### 2. 深度定制系统行为
+编辑 `config/config.yaml`：
+- **AI 偏好**：在 `ai_summarization` 中开启/关闭 `enable_deep_reading` (深度精读)。
+- **语义门槛**：修改 `semantic_radar` 的 `threshold`（值越高过滤越严）。
+- **推送渠道**：在 `notifications` 中开关企业微信、Bark 或钉钉。
+- **可视化设置**：开启 `enable_dashboard` 即可每次运行生成 HTML 看板。
 
-### 3️⃣ 运行
-```bash
-python main.py
-```
+### 3. 查看可视化看板
+运行结束后，打开项目根目录下的 `output/dashboard.html`，即可看到生成的精美网页日报。
 
 ---
 
@@ -68,19 +89,12 @@ python main.py
 
 ```text
 ├── config/
-│   ├── config.yaml       # 核心配置 (AI/通知/平台)
-│   ├── keywords.txt      # 关键词订阅
-│   └── cache.json        # 消息去重缓存
-├── src/
-│   ├── ai_engine.py      # AI 后端 (Gemini/GPT/Embedding)
-│   ├── summarizer.py     # AI 摘要逻辑
-│   ├── semantic.py       # 语义向量雷达
-│   ├── content_extractor.py # 网页正文抓取
-│   ├── playwright_engine.py # 无头浏览器驱动
-│   ├── fetcher.py        # 多平台数据抓取
-│   ├── dashboard.py      # HTML 看板生成
-│   └── notifier.py       # 多渠道通知系统
-└── main.py              # 主入口
+│   ├── config.yaml       # 系统逻辑配置
+│   ├── keywords.txt      # 关键词监控名单
+│   └── cache.json        # 自动去重数据
+├── src/                  # 核心源代码
+├── main.py              # 主入口
+└── .github/workflows/   # 云端自动运行脚本
 ```
 
 ---
