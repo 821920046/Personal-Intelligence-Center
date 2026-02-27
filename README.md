@@ -1,30 +1,30 @@
-# 🧠 私人智能情报中心 (Personal Intelligence Hub)
+# 🧠 AetherNode (元神节点) | 私人智能情报中心
 
-> 一个懂你意图、能读全文、多端同步的终极热点资讯聚合与 AI 分析系统。
+> **AetherNode**: An AI-native autonomous intelligence sentinel that observes, digests, and distills the global digital pulse into personalized wisdom.
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Playwright](https://img.shields.io/badge/Playwright-抓取增强-45ba4b?logo=playwright&logoColor=white)](https://playwright.dev)
+[![Playwright](https://img.shields.io/badge/Playwright-Browser%20Scraping-45ba4b?logo=playwright&logoColor=white)](https://playwright.dev)
 [![AI Powered](https://img.shields.io/badge/AI-Gemini%20/%20GPT-orange?logo=google-gemini&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
 
-## ✨ 核心黑科技
+## ✨ 核心黑科技 (Core Features)
 
-本系统不仅是一个爬虫，它更是一个私人的“智能情报大脑”。依托 AI 能力，它实现了从“看到”到“看懂”的跨越。
+**AetherNode** 彻底重构了你获取信息的方式。它不仅是一个订阅工具，更是你的数字替身，在浩如烟海的噪音中为你精准捕捉有价值的信号。
 
 ### 1. 🔍 语义雷达 (Semantic Radar)
-不再死板匹配词条。利用 **向量嵌入 (Embedding)** 技术，即便标题里没有你的关键词，只要意思沾边（例如“氢能”之于“新能源”），系统也会精准捕捉并标记为 `✨ 语义发现`。
+不再死板匹配词条。利用 **向量嵌入 (Embedding)** 技术，即便标题里没有你的关键词，只要意思沾边（例如“氢能”之于“新能源”），AetherNode 也会精准捕捉并标记为 `✨ 语义发现`。
 
 ### 2. 📖 深度精读 (Deep Reading)
 告别标题党。系统会自动抓取新闻后的网页正文，让 AI 读完几千字后再为你输出一份 300 字的深度提炼。你在消息窗口内，就能掌握整个事件的来龙去脉。
 
-### 3. 🤖 AI 三重提炼
+### 3. 🤖 AI 三重提炼 (Tri-Tier Synthesis)
 - **今日洞察 (Daily Insight)**：全网热点的全局综述，一句话看清今日焦点。
 - **组摘要 (Group Summary)**：针对你关心的每个关键词组，生成浓缩动态。
 - **全文综述 (Full-text AI)**：深度精读条目的模块化分析。
 
-### 4. 🌐 强力抓取引擎
+### 4. 🌐 强力抓取引擎 (Hybrid Scraper)
 - **双模态架构**：优先轻量 API，失败时自动唤起 **Playwright 无头浏览器**。
 - **全网覆盖**：知乎、微博、GitHub、Hacker News、Reddit、RSS 等 20+ 平台。
 - **自动翻译**：国际资讯全量翻译为中文，消除语言障碍。
@@ -34,7 +34,7 @@
 
 ---
 
-## 📲 多渠道分发
+## 📲 多渠道分发 (Delivery Channels)
 
 支持同时推送到以下终端：
 - **企业微信 (WeWork)**：Markdown 富文本推送。
@@ -43,12 +43,12 @@
 
 ---
 
-## 🚀 快速开始
+## 🚀 快速开始 (Quick Start)
 
 ### 1️⃣ 环境准备
 ```bash
-git clone https://github.com/YourUsername/IntelligenceHub.git
-cd IntelligenceHub
+git clone https://github.com/YourUsername/AetherNode.git
+cd AetherNode
 pip install -r requirements.txt
 playwright install chromium
 ```
