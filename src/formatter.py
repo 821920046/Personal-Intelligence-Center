@@ -41,6 +41,8 @@ PLATFORM_ICONS = {
 
 def format_by_keyword(
     keyword_results: dict[str, list[NewsItem]],
+    show_rank: bool = True,
+    show_url: bool = True,
     show_hot_value: bool = True,
     show_summary: bool = True,
     use_markdown: bool = True,
@@ -87,6 +89,7 @@ def format_by_platform(
     platform_names: dict[str, str] | None = None,
     show_rank: bool = True,
     show_url: bool = True,
+    show_hot_value: bool = True,
     max_per_platform: int = 10,
     show_summary: bool = True,
     use_markdown: bool = True,
