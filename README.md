@@ -22,7 +22,7 @@
 
 ---
 
-## � 部署指南 (Deployment)
+## 🚀 部署指南 (Deployment)
 
 ### 方案 A：GitHub Actions 自动运行（推荐，零成本，免服务器）
 
@@ -37,6 +37,16 @@
 3. **启用 Actions**：
    - 进入 `Actions` 页面，手动确认 `Enable Actions`。
    - 默认配置为每天北京时间 **07:00** 和 **18:00** 运行。
+
+### 💡 如何获取 AI_API_KEY (Google Gemini)？
+
+1. 访问 **[Google AI Studio](https://aistudio.google.com/)**。
+2. 使用 Google 账号登录。
+3. 点击左侧的 **"Get API key"**。
+4. 点击 **"Create API key in new project"**。
+5. 复制生成的 Key，并将其填入 GitHub Secrets 中的 `AI_API_KEY` 即可。
+
+---
 
 ### 方案 B：本地手动运行
 
