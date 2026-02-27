@@ -1,4 +1,4 @@
-# 🧠 私人智能情报中心 (Personal Intelligence Hub)
+# 🧠 私人智能情报中心 (Personal Intelligence Center)
 
 > **私人智能情报中心**: 一个懂你意图、能读全文、多端同步的终极热点资讯聚合与 AI 分析系统。
 
