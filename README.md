@@ -1,158 +1,90 @@
-# 📡 TrendPulse
+# 🧠 私人智能情报中心 (Personal Intelligence Hub)
 
-> 多平台热点订阅推送工具 —— 自定义关键词，每日精准推送到企业微信
+> 一个懂你意图、能读全文、多端同步的终极热点资讯聚合与 AI 分析系统。
 
-[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-定时推送-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Playwright](https://img.shields.io/badge/Playwright-抓取增强-45ba4b?logo=playwright&logoColor=white)](https://playwright.dev)
+[![AI Powered](https://img.shields.io/badge/AI-Gemini%20/%20GPT-orange?logo=google-gemini&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-
-## ✨ 核心功能
-
-- 🌐 **20+ 平台聚合** - 国内热搜 + 国际科技资讯一网打尽
-- 🎯 **关键词订阅** - 自定义关注话题，只推送你关心的内容
-- 🤖 **企业微信推送** - Markdown 富文本直达手机
-- ⏰ **每日定时** - GitHub Actions 免费运行，零服务器成本
-- 🔧 **灵活配置** - YAML 配置 + 关键词语法，3 分钟上手
-
-## 📊 支持平台
-
-| 分类 | 平台 |
-|------|------|
-| 🇨🇳 国内热搜 | 知乎、微博、百度、今日头条、B站、抖音、贴吧 |
-| 🇨🇳 国内财经 | 华尔街见闻、财联社、澎湃新闻、凤凰网 |
-| 🌍 科技社区 | **Hacker News**、**Product Hunt**、**GitHub Trending** |
-| 🌍 社交媒体 | **Reddit Popular** |
-| 🌍 国际媒体 | **TechCrunch**、**The Verge**、**Ars Technica**、**BBC News**、**Reuters** |
-
-## 🚀 快速开始
-
-### 30 秒部署
-
-#### 1️⃣ 获取项目代码
-
-点击本仓库右上角 **[Use this template]** → **Create a new repository**
-
-> ⚠️ 推荐 Template 方式，不建议 Fork（避免 Actions 权限问题）
-
-#### 2️⃣ 配置企业微信 Webhook
-
-1. 打开企业微信 → 进入目标群聊
-2. 群设置 → **消息推送** → **添加** → 得到 Webhook URL
-3. 在你的 GitHub 仓库中：**Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
-| Name | Secret |
-|------|--------|
-| `WEWORK_WEBHOOK_URL` | 你的企业微信机器人 Webhook URL |
-| `WEWORK_MSG_TYPE` | （可选）设为 `text` 发送纯文本，默认 `markdown` |
-
-#### 3️⃣ 自定义关键词
-
-编辑 `config/keywords.txt`，填入你关心的关键词：
-
-```
-AI 人工智能 ChatGPT GPT 大模型
-Python 开源 GitHub
-特斯拉 马斯克 @5
-华为 苹果 +手机 !水果
-```
-
-#### 4️⃣ 完成！
-
-- 每天北京时间 **07:00** 和 **18:00** 自动推送
-- 也可以在 **Actions** 页面手动触发测试
 
 ---
 
-## 📝 关键词语法
+## ✨ 核心黑科技
 
-| 语法 | 示例 | 说明 |
-|------|------|------|
-| 普通词 | `AI 人工智能` | 命中任一词即推送（OR） |
-| 必须词 `+` | `华为 +手机` | 必须同时命中（AND） |
-| 过滤词 `!` | `苹果 !水果` | 命中则排除 |
-| 数量限制 `@` | `特斯拉 @5` | 最多推送 5 条 |
-| 正则 `//` | `/\bGPT\b/` | 精确匹配 |
-| 全局过滤 | `[GLOBAL_FILTER]` | 该区域下的词全局排除 |
+本系统不仅是一个爬虫，它更是一个私人的“智能情报大脑”。依托 AI 能力，它实现了从“看到”到“看懂”的跨越。
 
-**完整示例：**
+### 1. 🔍 语义雷达 (Semantic Radar)
+不再死板匹配词条。利用 **向量嵌入 (Embedding)** 技术，即便标题里没有你的关键词，只要意思沾边（例如“氢能”之于“新能源”），系统也会精准捕捉并标记为 `✨ 语义发现`。
 
-```
-[GLOBAL_FILTER]
-广告
-推广
+### 2. 📖 深度精读 (Deep Reading)
+告别标题党。系统会自动抓取新闻后的网页正文，让 AI 读完几千字后再为你输出一份 300 字的深度提炼。你在消息窗口内，就能掌握整个事件的来龙去脉。
 
-[WORD_GROUPS]
-AI 人工智能 ChatGPT GPT 大模型 LLM
-Python 开源 GitHub
-科技 互联网 芯片
-华为 苹果 +手机 !水果 @10
-/\bGPT\b/ 大语言模型
-```
+### 3. 🤖 AI 三重提炼
+- **今日洞察 (Daily Insight)**：全网热点的全局综述，一句话看清今日焦点。
+- **组摘要 (Group Summary)**：针对你关心的每个关键词组，生成浓缩动态。
+- **全文综述 (Full-text AI)**：深度精读条目的模块化分析。
 
-## ⚙️ 平台配置
+### 4. 🌐 强力抓取引擎
+- **双模态架构**：优先轻量 API，失败时自动唤起 **Playwright 无头浏览器**。
+- **全网覆盖**：知乎、微博、GitHub、Hacker News、Reddit、RSS 等 20+ 平台。
+- **自动翻译**：国际资讯全量翻译为中文，消除语言障碍。
 
-编辑 `config/config.yaml` 的 `platforms` 部分，通过 `enabled: true/false` 开关各平台：
+### 5. 🎨 绝美可视化看板 (Dashboard)
+每次运行自动生成一个 **Apple 审美风格** 的静态 HTML 报告。完美适配深色模式，让回顾热点成为一种视觉享受。
 
-```yaml
-platforms:
-  - id: "hackernews"
-    name: "Hacker News"
-    type: "hackernews"
-    enabled: true       # ← 改为 false 即关闭
-    max_items: 20
+---
 
-  - id: "techcrunch"
-    name: "TechCrunch"
-    type: "rss"
-    url: "https://techcrunch.com/feed/"
-    enabled: true
-    max_items: 15
+## 📲 多渠道分发
+
+支持同时推送到以下终端：
+- **企业微信 (WeWork)**：Markdown 富文本推送。
+- **Bark (iOS)**：苹果全家桶即时弹窗。
+- **钉钉 (DingTalk)**：群机器人通知。
+
+---
+
+## 🚀 快速开始
+
+### 1️⃣ 环境准备
+```bash
+git clone https://github.com/YourUsername/IntelligenceHub.git
+cd IntelligenceHub
+pip install -r requirements.txt
+playwright install chromium
 ```
 
-### 平台类型说明
+### 2️⃣ 配置文件
+- `config/keywords.txt`: 填入你关心的关键词。
+- `config/config.yaml`: 配置 API KEY 和通知渠道。
 
-| type | 说明 | 示例平台 |
-|------|------|----------|
-| `newsnow` | NewsNow API 抓取 | 知乎、微博、百度、头条 |
-| `hackernews` | HN 官方 API | Hacker News |
-| `github` | GitHub Trending 页面 | GitHub Trending |
-| `reddit` | Reddit JSON API | Reddit Popular |
-| `producthunt` | Product Hunt RSS | Product Hunt |
-| `rss` | 通用 RSS/Atom | TechCrunch、BBC、Reuters |
-
-## ⏰ 修改推送时间
-
-编辑 `.github/workflows/push.yml` 中的 `cron` 表达式：
-
-```yaml
-schedule:
-  # 北京时间 = UTC + 8，需要减去 8 小时
-  - cron: "0 23 * * *"   # 北京时间 07:00
-  - cron: "0 10 * * *"   # 北京时间 18:00
+### 3️⃣ 运行
+```bash
+python main.py
 ```
 
-> ⚠️ GitHub Actions 时间可能有 ±15 分钟偏差
+---
 
-## 📂 项目结构
+## 📂 项目架构
 
-```
-TrendPulse/
-├── .github/workflows/
-│   └── push.yml          # GitHub Actions 定时任务
+```text
 ├── config/
-│   ├── config.yaml       # 平台与显示配置
-│   └── keywords.txt      # 关键词订阅
+│   ├── config.yaml       # 核心配置 (AI/通知/平台)
+│   ├── keywords.txt      # 关键词订阅
+│   └── cache.json        # 消息去重缓存
 ├── src/
-│   ├── models.py         # 数据模型
-│   ├── fetcher.py        # 数据抓取（双引擎）
-│   ├── filter.py         # 关键词过滤
-│   ├── formatter.py      # 消息格式化
-│   └── notifier.py       # 企业微信推送
-├── main.py               # 主入口
-├── requirements.txt      # Python 依赖
-└── README.md
+│   ├── ai_engine.py      # AI 后端 (Gemini/GPT/Embedding)
+│   ├── summarizer.py     # AI 摘要逻辑
+│   ├── semantic.py       # 语义向量雷达
+│   ├── content_extractor.py # 网页正文抓取
+│   ├── playwright_engine.py # 无头浏览器驱动
+│   ├── fetcher.py        # 多平台数据抓取
+│   ├── dashboard.py      # HTML 看板生成
+│   └── notifier.py       # 多渠道通知系统
+└── main.py              # 主入口
 ```
 
-## 📄 License
+---
 
-MIT License
+## 📄 开源协议
+
+基于 **MIT License** 开源。

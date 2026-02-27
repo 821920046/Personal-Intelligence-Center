@@ -18,6 +18,7 @@ import requests
 
 from src.models import NewsItem, PlatformConfig
 from src.translator import translate_batch
+from src.playwright_engine import run_playwright_fetch
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,41 @@ def _fetch_zhihu(platform: PlatformConfig) -> list[NewsItem]:
         logger.info("✅ [%s] 抓取到 %d 条", platform.name, len(items))
         return items
     except Exception as e:
-        logger.error("❌ [%s] 抓取失败: %s", platform.name, e)
+        logger.warning("⚠️ [%s] API 抓取异常，尝试浏览器模式: %s", platform.name, e)
+        return _fetch_zhihu_browser(platform)
+
+
+def _fetch_zhihu_browser(platform: PlatformConfig) -> list[NewsItem]:
+    """知乎热榜 - 浏览器模式 (后备方案)"""
+    try:
+        url = "https://www.zhihu.com/hot"
+        html = run_playwright_fetch(url, wait_selector=".HotItem")
+        if not html:
+            return []
+
+        items: list[NewsItem] = []
+        # 简单正则提取 (由于知乎页面结构可能变化，这里做基础兼容)
+        # 寻找 HotItem-content 里的标题
+        titles = re.findall(r'<h2 class="HotItem-title">([^<]+)</h2>', html)
+        links = re.findall(r'<a href="([^"]+)" [^>]*class="HotItem-content"', html)
+        excerpts = re.findall(r'<p class="HotItem-excerpt">([^<]+)</p>', html)
+        metrics = re.findall(r'<div class="HotItem-metrics">([^<]+)</div>', html)
+
+        for i in range(min(len(titles), platform.max_items)):
+            items.append(NewsItem(
+                title=titles[i].strip(),
+                url=links[i] if i < len(links) else "",
+                platform=platform.name,
+                platform_id=platform.id,
+                rank=i + 1,
+                hot_value=metrics[i].strip() if i < len(metrics) else "",
+                content=excerpts[i].strip() if i < len(excerpts) else ""
+            ))
+        
+        logger.info("✅ [%s] 浏览器模式抓取到 %d 条", platform.name, len(items))
+        return items
+    except Exception as e:
+        logger.error("❌ [%s] 浏览器模式也抓取失败: %s", platform.name, e)
         return []
 
 

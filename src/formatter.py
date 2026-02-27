@@ -41,11 +41,11 @@ PLATFORM_ICONS = {
 
 def format_by_keyword(
     keyword_results: dict[str, list[NewsItem]],
-    show_rank: bool = True,
-    show_url: bool = True,
     show_hot_value: bool = True,
     show_summary: bool = True,
     use_markdown: bool = True,
+    group_summaries: dict[str, str] | None = None,
+    daily_insight: str | None = None,
 ) -> list[str]:
     """
     将按关键词分组的结果格式化为企业微信消息列表。
@@ -56,8 +56,12 @@ def format_by_keyword(
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
         header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+        if daily_insight:
+            header += f"\n💡 **今日洞察**\n> {daily_insight}\n"
     else:
         header = f"📡 TrendPulse 热点速递\n⏰ {now}\n"
+        if daily_insight:
+            header += f"\n💡 今日洞察：{daily_insight}\n"
 
     lines: list[str] = []
     for keyword_label, items in keyword_results.items():
@@ -65,8 +69,12 @@ def format_by_keyword(
             continue
         if use_markdown:
             lines.append(f"\n---\n🔥 **{keyword_label}** `({len(items)}条)`\n")
+            if group_summaries and keyword_label in group_summaries:
+                lines.append(f"🤖 *AI 综述: {group_summaries[keyword_label]}*\n")
         else:
             lines.append(f"\n---\n🔥 {keyword_label} ({len(items)}条)\n")
+            if group_summaries and keyword_label in group_summaries:
+                lines.append(f"   [AI 综述] {group_summaries[keyword_label]}\n")
         
         for item in items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
@@ -79,10 +87,10 @@ def format_by_platform(
     platform_names: dict[str, str] | None = None,
     show_rank: bool = True,
     show_url: bool = True,
-    show_hot_value: bool = True,
     max_per_platform: int = 10,
     show_summary: bool = True,
     use_markdown: bool = True,
+    daily_insight: str | None = None,
 ) -> list[str]:
     """
     将按平台分组的结果格式化为企业微信消息列表。
@@ -93,8 +101,12 @@ def format_by_platform(
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
         header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+        if daily_insight:
+            header += f"\n💡 **今日洞察**\n> {daily_insight}\n"
     else:
         header = f"📡 TrendPulse 热点速递\n⏰ {now}\n"
+        if daily_insight:
+            header += f"\n💡 今日洞察：{daily_insight}\n"
 
     lines: list[str] = []
     for platform_id, items in platform_results.items():

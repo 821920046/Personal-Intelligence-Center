@@ -166,6 +166,10 @@ display:
   show_url: true
   # 是否显示正文摘要（相关新闻主要内容）
   show_summary: true
+  # 是否在控制台显示进度条
+  show_progress: true
+  # 是否生成可视化看板 (HTML 报告)
+  enable_dashboard: true
 
 # --------------------------------------------------
 # 翻译配置
@@ -175,3 +179,63 @@ translation:
   enabled: true
   # 并发翻译数量
   max_workers: 5
+
+# --------------------------------------------------
+# 缓存配置 (去重机制)
+# ----------------------------------------------
+cache:
+  # 是否启用消息去重（避免重复收到已看过的热点）
+  enabled: true
+  # 缓存文件存储路径
+  file: "config/cache.json"
+  # 缓存保留天数（过期自动清理）
+  expire_days: 7
+
+# --------------------------------------------------
+# AI 智能摘要配置
+# --------------------------------------------------
+ai_summarization:
+  # 是否开启 AI 智能摘要
+  enabled: true
+  # 模型名称 (gemini-1.5-flash, gpt-4o 等)
+  model: "gemini-1.5-flash"
+  # API 代理或基础 URL (留空则使用默认)
+  base_url: ""
+  # 是否生成全天候趋势总览 (今日洞察)
+  enable_daily_insight: true
+  # 是否为每个关键词组生成聚合摘要
+  enable_group_summary: true
+  # 是否开启深度阅读 (提取正文全文进行 AI 浓缩)
+  enable_deep_reading: true
+  # 深度阅读触发阈值 (仅针对匹配到关键词且排名前 N 的条目)
+  deep_reading_top_n: 3
+
+# --------------------------------------------------
+# 语义雷达配置 (AI 向量过滤)
+# --------------------------------------------------
+semantic_radar:
+  # 是否开启语义雷达 (捕捉语义相关但未含关键词的热点)
+  enabled: true
+  # 相似度阈值 (0.0 - 1.0)
+  # 建议 0.65 - 0.75，越高质量要求越高，越低越容易捕捉模糊关联
+  threshold: 0.7
+
+# --------------------------------------------------
+# 通知渠道配置 (多渠道推送)
+# --------------------------------------------------
+notifications:
+  # 企业微信 (WeWork) - 默认保持旧环境变量 WEWORK_WEBHOOK_URL
+  wework:
+    enabled: true
+    msg_type: "markdown"
+
+  # Bark (iOS 推送)
+  bark:
+    enabled: false
+    device_key: ""
+    base_url: "https://api.day.app"
+
+  # 钉钉 (DingTalk)
+  dingtalk:
+    enabled: false
+    webhook_url: ""
