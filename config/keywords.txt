@@ -29,4 +29,6 @@
 [WORD_GROUPS]
 AI 人工智能 ChatGPT GPT 大模型 LLM
 Python 开源 GitHub
-科技 互联网 芯片
+科技 互联网 芯片 数码3C
+手机（苹果 三星 华为 OPPO vivo 小米 荣耀 一加 ）
+电脑 电脑硬件（内存 硬盘 CPU GPU 显卡）
