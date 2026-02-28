@@ -61,22 +61,39 @@ class AIEngine:
             return None
             
         try:
-            # 统一使用 OpenAI 的 Embeddings 端点结构
-            url = f"{self.base_url.replace('/chat/completions', '')}/embeddings"
-            headers = {"Authorization": f"Bearer {self.api_key}"}
-            
-            # 如果使用 Gemini 官方提供的兼容 endpoint，则它对应的模型别名
-            # 需要在传递时进行适配。对于 OpenAI，可默认为 text-embedding-3-small
-            embed_model = "text-embedding-004" if "googleapis" in self.base_url else "text-embedding-3-small"
-            
-            payload = {"input": text, "model": embed_model}
-            resp = requests.post(url, json=payload, headers=headers, timeout=20)
-            resp.raise_for_status()
-            
-            data = resp.json()
-            if 'data' in data and len(data['data']) > 0:
-                return data['data'][0]['embedding']
-            return None
+            if "googleapis.com" in self.base_url:
+                # Google 原生 Embedding 接口 (官方 OpenAI 兼容网关目前不支持 embeddings 路径)
+                # 所以如果是 Google 的地址，我们要切回使用原生端点
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={self.api_key}"
+                payload = {
+                    "content": {"parts": [{"text": text}]}
+                }
+                resp = requests.post(url, json=payload, timeout=20)
+                if resp.status_code == 404:
+                    logger.error(f"获取 Embedding 失败: 404 端点未找到 ({url})，确保使用有效的 Gemini API。")
+                    return None
+                    
+                resp.raise_for_status()
+                data = resp.json()
+                if 'embedding' in data and 'values' in data['embedding']:
+                    return data['embedding']['values']
+                return None
+            else:
+                # 统一使用第三方 OpenAI 的 Embeddings 端点结构
+                url = f"{self.base_url.replace('/chat/completions', '')}/embeddings"
+                headers = {"Authorization": f"Bearer {self.api_key}"}
+                payload = {"input": text, "model": "text-embedding-3-small"}
+                resp = requests.post(url, json=payload, headers=headers, timeout=20)
+                
+                if resp.status_code == 404:
+                    logger.error(f"获取 Embedding 失败: 404 端点未找到 ({url})，请确认代理地址是否正确匹配 OpenAI 格式。")
+                    return None
+                    
+                resp.raise_for_status()
+                data = resp.json()
+                if 'data' in data and len(data['data']) > 0:
+                    return data['data'][0]['embedding']
+                return None
         except Exception as e:
             logger.error("获取 Embedding 失败: %s", e)
             return None
