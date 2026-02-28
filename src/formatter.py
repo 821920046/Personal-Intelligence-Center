@@ -53,15 +53,15 @@ def format_by_keyword(
     将按关键词分组的结果格式化为企业微信消息列表。
     """
     if not keyword_results:
-        return ["📭 TrendPulse - 暂无匹配关键词的热点"] if not use_markdown else ["<font color=\"comment\">📭 TrendPulse - 暂无匹配</font>"]
+        return ["📭 Personal-Intelligence-Center - 暂无匹配关键词的热点"] if not use_markdown else ["<font color=\"comment\">📭 Personal-Intelligence-Center - 暂无匹配</font>"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
-        header = f"📡 <font color=\"info\">TrendPulse 热点速递</font>\n⏰ <font color=\"comment\">{now}</font>\n"
+        header = f"📡 <font color=\"info\">Personal-Intelligence-Center 热点速递</font>\n⏰ <font color=\"comment\">{now}</font>\n"
         if daily_insight:
             header += f"\n💡 <font color=\"warning\">今日洞察</font>\n<font color=\"comment\">{daily_insight}</font>\n"
     else:
-        header = f"📡 TrendPulse 热点速递\n⏰ {now}\n"
+        header = f"📡 Personal-Intelligence-Center 热点速递\n⏰ {now}\n"
         if daily_insight:
             header += f"\n💡 今日洞察：{daily_insight}\n"
 
@@ -99,15 +99,15 @@ def format_by_platform(
     将按平台分组的结果格式化为企业微信消息列表。
     """
     if not platform_results:
-        return ["📭 TrendPulse - 暂无热点数据"] if not use_markdown else ["<font color=\"comment\">📭 TrendPulse - 暂无数据</font>"]
+        return ["📭 Personal-Intelligence-Center - 暂无热点数据"] if not use_markdown else ["<font color=\"comment\">📭 Personal-Intelligence-Center - 暂无数据</font>"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
-        header = f"📡 <font color=\"info\">TrendPulse 平台热搜</font>\n⏰ <font color=\"comment\">{now}</font>\n"
+        header = f"📡 <font color=\"info\">Personal-Intelligence-Center 平台热搜</font>\n⏰ <font color=\"comment\">{now}</font>\n"
         if daily_insight:
             header += f"\n💡 <font color=\"warning\">今日洞察</font>\n<font color=\"comment\">{daily_insight}</font>\n"
     else:
-        header = f"📡 TrendPulse 平台热搜\n⏰ {now}\n"
+        header = f"📡 Personal-Intelligence-Center 平台热搜\n⏰ {now}\n"
         if daily_insight:
             header += f"\n💡 今日洞察：{daily_insight}\n"
 
@@ -175,7 +175,8 @@ def _format_item(
     else:
         hot_str = f" ({item.hot_value})" if show_hot_value and item.hot_value else ""
         if show_url and item.url:
-            parts.append(f"{rank_str}{title}{hot_str} - {item.url}")
+            # 企微纯文本模式支持 <a> 标签包裹实现超链接跳转，避免由于网址过长污染排版
+            parts.append(f"{rank_str}<a href=\"{item.url}\">{title}</a>{hot_str}")
         else:
             parts.append(f"{rank_str}{title}{hot_str}")
     

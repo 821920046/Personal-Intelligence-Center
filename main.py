@@ -108,7 +108,7 @@ def main() -> None:
 
     if not platform_results:
         logger.warning("⚠️  所有平台均无数据")
-        messages = ["📭 TrendPulse - 本次运行未获取到任何热点数据"]
+        messages = ["📭 Personal-Intelligence-Center - 本次运行未获取到任何热点数据"]
         send_wework(webhook_url, messages, msg_type)
         return
 
@@ -167,7 +167,7 @@ def main() -> None:
         keyword_results = filter_news(all_items, keyword_config)
         if not keyword_results:
             logger.info("📭 无匹配关键词的热点")
-            messages = ["📭 TrendPulse - 今日暂无匹配订阅关键词的热点"]
+            messages = ["📭 Personal-Intelligence-Center - 今日暂无匹配订阅关键词的热点"]
             send_wework(webhook_url, messages, msg_type)
             return
 

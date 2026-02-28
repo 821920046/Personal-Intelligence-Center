@@ -96,9 +96,9 @@ class BarkNotifier(Notifier):
             # Bark 消息通常不宜过长，合并为一条可能由服务端截断，这里逐条发送重要摘要
             url = f"{self.base_url}/{self.device_key}"
             payload = {
-                "title": kwargs.get("title", "TrendPulse 热点"),
+                "title": kwargs.get("title", "Personal-Intelligence-Center 热点"),
                 "body": msg,
-                "group": "TrendPulse",
+                "group": "Personal-Intelligence-Center",
                 "icon": "https://raw.githubusercontent.com/gaoryrt/TrendPulse/main/icon.png"
             }
             try:
@@ -127,7 +127,7 @@ class DingTalkNotifier(Notifier):
             payload = {
                 "msgtype": "markdown",
                 "markdown": {
-                    "title": "TrendPulse 热点",
+                    "title": "Personal-Intelligence-Center 热点",
                     "text": msg
                 }
             }
