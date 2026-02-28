@@ -16,8 +16,9 @@ def extract_full_text(url: str) -> Optional[str]:
         return None
         
     try:
-        # 1. 下载网页
+        # 1. 下载网页，增加自定义 User-Agent 避免 403
         downloaded = trafilatura.fetch_url(url)
+        # 如果原生 fetch 失败，某些站点可能需要更强的伪装
         if not downloaded:
             logger.warning("无法下载网页内容: %s", url)
             return None
