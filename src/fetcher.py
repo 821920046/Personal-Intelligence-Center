@@ -329,10 +329,11 @@ def _fetch_wallstreetcn(platform: PlatformConfig) -> list[NewsItem]:
             # 见闻推送内容通常较长，截取前 40 字作为标题
             title = _clean_html(text)[:60] + "..."
             uri = entry.get("uri", "")
+            final_url = uri if uri.startswith("http") else f"https://wallstreetcn.com/live/{uri}" if uri else ""
 
             items.append(NewsItem(
                 title=title,
-                url=f"https://wallstreetcn.com/live/{uri}" if uri else "",
+                url=final_url,
                 platform=platform.name, platform_id=platform.id,
                 rank=i + 1,
                 content=_clean_html(text)

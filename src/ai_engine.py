@@ -14,7 +14,7 @@ class AIEngine:
         self.api_key = api_key or os.environ.get("AI_API_KEY")
         self.model = model
         # 默认支持 Gemini API 格式，如果 base_url 包含 openai 则切换逻辑
-        self.base_url = base_url or os.environ.get("AI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/models")
+        self.base_url = (base_url or os.environ.get("AI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")).rstrip('/')
         
     def generate_content(self, prompt: str) -> Optional[str]:
         """生成文本内容"""
@@ -25,7 +25,7 @@ class AIEngine:
         try:
             if "googleapis" in self.base_url:
                 # Gemini 协议
-                url = f"{self.base_url}/{self.model}:generateContent?key={self.api_key}"
+                url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
                 payload = {
                     "contents": [{
                         "parts": [{"text": prompt}]
@@ -67,7 +67,7 @@ class AIEngine:
         try:
             if "googleapis" in self.base_url:
                 # Gemini Embedding
-                url = f"{self.base_url}/text-embedding-004:embedContent?key={self.api_key}"
+                url = f"{self.base_url}/models/text-embedding-004:embedContent?key={self.api_key}"
                 payload = {
                     "content": {"parts": [{"text": text}]}
                 }
