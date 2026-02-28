@@ -53,13 +53,13 @@ def format_by_keyword(
     将按关键词分组的结果格式化为企业微信消息列表。
     """
     if not keyword_results:
-        return ["📭 Personal-Intelligence-Center - 暂无匹配关键词的热点"] if not use_markdown else ["<font color=\"comment\">📭 Personal-Intelligence-Center - 暂无匹配</font>"]
+        return ["📭 Personal-Intelligence-Center - 暂无匹配关键词的热点"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
-        header = f"📡 <font color=\"info\">Personal-Intelligence-Center 热点速递</font>\n⏰ <font color=\"comment\">{now}</font>\n"
+        header = f"📡 **Personal-Intelligence-Center 热点速递**\n⏰ {now}\n"
         if daily_insight:
-            header += f"\n💡 <font color=\"warning\">今日洞察</font>\n<font color=\"comment\">{daily_insight}</font>\n"
+            header += f"\n💡 **今日洞察**\n{daily_insight}\n"
     else:
         header = f"📡 Personal-Intelligence-Center 热点速递\n⏰ {now}\n"
         if daily_insight:
@@ -70,9 +70,9 @@ def format_by_keyword(
         if not items:
             continue
         if use_markdown:
-            lines.append(f"\n🔥 <font color=\"info\">{keyword_label}</font> <font color=\"comment\">({len(items)}条)</font>")
+            lines.append(f"\n🔥 **{keyword_label}** ({len(items)}条)")
             if group_summaries and keyword_label in group_summaries:
-                lines.append(f"🤖 <font color=\"comment\">AI 综述: {_safe_byte_truncate(group_summaries[keyword_label], 200)}</font>")
+                lines.append(f"🤖 AI 综述: {_safe_byte_truncate(group_summaries[keyword_label], 200)}")
         else:
             lines.append(f"\n🔥 {keyword_label} ({len(items)}条)")
             if group_summaries and keyword_label in group_summaries:
@@ -99,13 +99,13 @@ def format_by_platform(
     将按平台分组的结果格式化为企业微信消息列表。
     """
     if not platform_results:
-        return ["📭 Personal-Intelligence-Center - 暂无热点数据"] if not use_markdown else ["<font color=\"comment\">📭 Personal-Intelligence-Center - 暂无数据</font>"]
+        return ["📭 Personal-Intelligence-Center - 暂无热点数据"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
-        header = f"📡 <font color=\"info\">Personal-Intelligence-Center 平台热搜</font>\n⏰ <font color=\"comment\">{now}</font>\n"
+        header = f"📡 **Personal-Intelligence-Center 平台热搜**\n⏰ {now}\n"
         if daily_insight:
-            header += f"\n💡 <font color=\"warning\">今日洞察</font>\n<font color=\"comment\">{daily_insight}</font>\n"
+            header += f"\n💡 **今日洞察**\n{daily_insight}\n"
     else:
         header = f"📡 Personal-Intelligence-Center 平台热搜\n⏰ {now}\n"
         if daily_insight:
@@ -123,7 +123,7 @@ def format_by_platform(
         
         display_items = items[:max_per_platform]
         if use_markdown:
-            lines.append(f"\n{icon} <font color=\"info\">{display_name}</font>")
+            lines.append(f"\n{icon} **{display_name}**")
         else:
             lines.append(f"\n{icon} {display_name}")
             
@@ -169,14 +169,13 @@ def _format_item(
     title = re.sub(r'<[^>]+>', '', item.title).replace("\n", " ").strip()
     
     if use_markdown:
-        hot_str = f" <font color=\"warning\">{item.hot_value}</font>" if show_hot_value and item.hot_value else ""
+        hot_str = f" 🔥{item.hot_value}" if show_hot_value and item.hot_value else ""
         title_md = f"[{title}]({item.url})" if (show_url and item.url) else title
         parts.append(f"{rank_str}{title_md}{hot_str}")
     else:
         hot_str = f" ({item.hot_value})" if show_hot_value and item.hot_value else ""
         if show_url and item.url:
-            # 企微纯文本模式支持 <a> 标签包裹实现超链接跳转，避免由于网址过长污染排版
-            parts.append(f"{rank_str}<a href=\"{item.url}\">{title}</a>{hot_str}")
+            parts.append(f"{rank_str}{title}{hot_str} - {item.url}")
         else:
             parts.append(f"{rank_str}{title}{hot_str}")
     
@@ -190,7 +189,7 @@ def _format_item(
             
         if summary:
             if use_markdown:
-                parts.append(f"   <font color=\"comment\">{summary}</font>")
+                parts.append(f"   > {summary}")
             else:
                 parts.append(f"   └ {summary}")
         
@@ -231,12 +230,12 @@ def _split_to_messages(header: str, lines: list[str]) -> list[str]:
         messages.append(current_msg)
 
     if not messages:
-        return [header + "\n<font color=\"comment\">📭 暂无有效内容</font>"]
+        return [header + "\n📭 暂无有效内容"]
 
     # 加上页码
     total_pages = len(messages)
     if total_pages > 1:
         for i in range(total_pages):
-            messages[i] += f"\n\n<font color=\"comment\">({i+1}/{total_pages})</font>"
+            messages[i] += f"\n\n({i+1}/{total_pages})"
 
     return messages

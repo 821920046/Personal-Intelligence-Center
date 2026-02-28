@@ -73,8 +73,8 @@ def main() -> None:
 
     # 1. 读取配置
     webhook_url = os.environ.get("WEWORK_WEBHOOK_URL", "")
-    # 兼容微信：默认改为 text 模式
-    msg_type = os.environ.get("WEWORK_MSG_TYPE", "text")
+    # 默认恢复使用 markdown 模式，并保证在格式化器里去掉不兼容的 font 标签
+    msg_type = os.environ.get("WEWORK_MSG_TYPE", "markdown")
     use_markdown = (msg_type == "markdown")
 
     if not webhook_url:
