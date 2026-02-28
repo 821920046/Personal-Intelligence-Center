@@ -53,13 +53,13 @@ def format_by_keyword(
     将按关键词分组的结果格式化为企业微信消息列表。
     """
     if not keyword_results:
-        return ["📭 TrendPulse - 暂无匹配关键词的热点"] if not use_markdown else ["📭 **TrendPulse** - 暂无匹配关键词的热点"]
+        return ["📭 TrendPulse - 暂无匹配关键词的热点"] if not use_markdown else ["<font color=\"comment\">📭 TrendPulse - 暂无匹配</font>"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
-        header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+        header = f"📡 <font color=\"info\">TrendPulse 热点速递</font>\n⏰ <font color=\"comment\">{now}</font>\n"
         if daily_insight:
-            header += f"\n💡 **今日洞察**\n> {daily_insight}\n"
+            header += f"\n💡 <font color=\"warning\">今日洞察</font>\n<font color=\"comment\">{daily_insight}</font>\n"
     else:
         header = f"📡 TrendPulse 热点速递\n⏰ {now}\n"
         if daily_insight:
@@ -70,13 +70,13 @@ def format_by_keyword(
         if not items:
             continue
         if use_markdown:
-            lines.append(f"\n---\n🔥 **{keyword_label}** `({len(items)}条)`\n")
+            lines.append(f"\n🔥 <font color=\"info\">{keyword_label}</font> <font color=\"comment\">({len(items)}条)</font>")
             if group_summaries and keyword_label in group_summaries:
-                lines.append(f"🤖 *AI 综述: {group_summaries[keyword_label]}*\n")
+                lines.append(f"🤖 <font color=\"comment\">AI 综述: {_safe_byte_truncate(group_summaries[keyword_label], 200)}</font>")
         else:
-            lines.append(f"\n---\n🔥 {keyword_label} ({len(items)}条)\n")
+            lines.append(f"\n🔥 {keyword_label} ({len(items)}条)")
             if group_summaries and keyword_label in group_summaries:
-                lines.append(f"   [AI 综述] {group_summaries[keyword_label]}\n")
+                lines.append(f"[AI 综述] {group_summaries[keyword_label]}")
         
         for item in items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
@@ -99,15 +99,15 @@ def format_by_platform(
     将按平台分组的结果格式化为企业微信消息列表。
     """
     if not platform_results:
-        return ["📭 TrendPulse - 暂无热点数据"] if not use_markdown else ["📭 **TrendPulse** - 暂无热点数据"]
+        return ["📭 TrendPulse - 暂无热点数据"] if not use_markdown else ["<font color=\"comment\">📭 TrendPulse - 暂无数据</font>"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
     if use_markdown:
-        header = f"📡 **TrendPulse 热点速递**\n⏰ {now}\n"
+        header = f"📡 <font color=\"info\">TrendPulse 平台热搜</font>\n⏰ <font color=\"comment\">{now}</font>\n"
         if daily_insight:
-            header += f"\n💡 **今日洞察**\n> {daily_insight}\n"
+            header += f"\n💡 <font color=\"warning\">今日洞察</font>\n<font color=\"comment\">{daily_insight}</font>\n"
     else:
-        header = f"📡 TrendPulse 热点速递\n⏰ {now}\n"
+        header = f"📡 TrendPulse 平台热搜\n⏰ {now}\n"
         if daily_insight:
             header += f"\n💡 今日洞察：{daily_insight}\n"
 
@@ -123,9 +123,9 @@ def format_by_platform(
         
         display_items = items[:max_per_platform]
         if use_markdown:
-            lines.append(f"\n---\n{icon} **{display_name}**\n")
+            lines.append(f"\n{icon} <font color=\"info\">{display_name}</font>")
         else:
-            lines.append(f"\n---\n{icon} {display_name}\n")
+            lines.append(f"\n{icon} {display_name}")
             
         for item in display_items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
@@ -142,14 +142,10 @@ def _safe_byte_truncate(text: str, max_bytes: int) -> str:
     if len(encoded) <= max_bytes:
         return text
     
-    # 截断字节流
     truncated_bytes = encoded[:max_bytes]
-    # 过滤掉末尾可能破碎的字符字节
-    # UTF-8 中，多字节字符的后续字节都以 10 开头 (0x80 - 0xBF)
     while len(truncated_bytes) > 0 and (truncated_bytes[-1] & 0xC0) == 0x80:
         truncated_bytes = truncated_bytes[:-1]
     
-    # 还要去掉起始的那个字节（如果是破碎的）
     if len(truncated_bytes) > 0 and (truncated_bytes[-1] & 0xC0) == 0xC0:
         truncated_bytes = truncated_bytes[:-1]
          
@@ -164,51 +160,38 @@ def _format_item(
     show_summary: bool = True,
     use_markdown: bool = True
 ) -> str:
-    """格式化单条新闻条目 - 支持 Markdown 和 Text 降级"""
+    """格式化单条新闻条目 - 轻量化排版"""
     parts: list[str] = []
     
-    # 标题行：加粗并增强视觉区分度
+    rank_str = f"{item.rank}. " if show_rank and item.rank > 0 else "• "
+    
+    # 清洗标题首尾空格和换行
+    title = re.sub(r'<[^>]+>', '', item.title).replace("\n", " ").strip()
+    
     if use_markdown:
-        rank_str = f"`{item.rank}` " if show_rank and item.rank > 0 else ""
-        hot_str = f" `[{item.hot_value}]`" if show_hot_value and item.hot_value else ""
+        hot_str = f" <font color=\"warning\">{item.hot_value}</font>" if show_hot_value and item.hot_value else ""
+        title_md = f"[{title}]({item.url})" if (show_url and item.url) else title
+        parts.append(f"{rank_str}{title_md}{hot_str}")
     else:
-        rank_str = f"[{item.rank}] " if show_rank and item.rank > 0 else ""
         hot_str = f" ({item.hot_value})" if show_hot_value and item.hot_value else ""
-    
-    # 标题基础清洗：移除所有 HTML 标签并处理换行
-    title = re.sub(r'<[^>]+>', '', item.title)
-    title = title.replace("\n", " ").strip()
-    
-    if show_url and item.url:
-        if use_markdown:
-            title_md = f"{rank_str}**[{title}]({item.url})**{hot_str}"
+        if show_url and item.url:
+            parts.append(f"{rank_str}{title}{hot_str} - {item.url}")
         else:
-            # Text 模式下降级显示链接
-            title_md = f"{rank_str}{title}{hot_str} \n🔗 {item.url}"
-    else:
-        if use_markdown:
-            title_md = f"{rank_str}**{title}**{hot_str}"
-        else:
-            title_md = f"{rank_str}{title}{hot_str}"
-    
-    parts.append(title_md)
+            parts.append(f"{rank_str}{title}{hot_str}")
     
     # 摘要行
     if show_summary and item.content:
-        # 深度清洗摘要，移除可能的 HTML 残留
-        summary = re.sub(r'<[^>]+>', '', item.content)
-        summary = summary.replace("\n", " ").strip()
+        summary = re.sub(r'<[^>]+>', '', item.content).replace("\n", " ").strip()
         
-        # 安全截断摘要：约 300 字节以内
-        if len(summary.encode('utf-8')) > 300:
-            summary = _safe_byte_truncate(summary, 290) + "..."
+        # 截断摘要到约 100 字节，更短更精练
+        if len(summary.encode('utf-8')) > 120:
+            summary = _safe_byte_truncate(summary, 110) + "..."
             
         if summary:
             if use_markdown:
-                p_tag = f"*{item.platform}* "
-                parts.append(f"> {p_tag}{summary}")
+                parts.append(f"   <font color=\"comment\">{summary}</font>")
             else:
-                parts.append(f"   └─ {summary}")
+                parts.append(f"   └ {summary}")
         
     return "\n".join(parts)
 
@@ -220,7 +203,6 @@ def _split_to_messages(header: str, lines: list[str]) -> list[str]:
     messages: list[str] = []
     current_msg = header
     
-    # 企微限制 4096 字节。预留安全空间
     BYTE_LIMIT = 3800 
 
     for line in lines:
@@ -229,16 +211,14 @@ def _split_to_messages(header: str, lines: list[str]) -> list[str]:
         line_bytes_len = len(line_with_newline.encode('utf-8'))
             
         if msg_bytes_len + line_bytes_len > BYTE_LIMIT:
-            # 当前消息已接近上限，或者单行本身就巨大
             if current_msg.strip() != header.strip():
                 messages.append(current_msg)
                 current_msg = header
             
-            # 如果单行内容依然超出单条消息的总限制，则由于单行不可分割，进行硬截取
             if len((header + line_with_newline).encode('utf-8')) > BYTE_LIMIT:
                 remaining_limit = BYTE_LIMIT - len(header.encode('utf-8')) - 10
                 truncated_line = _safe_byte_truncate(line, remaining_limit)
-                current_msg = header + "\n" + truncated_line + " (内容超长已截断)..."
+                current_msg = header + "\n" + truncated_line + " (已截断)"
                 messages.append(current_msg)
                 current_msg = header
             else:
@@ -250,12 +230,12 @@ def _split_to_messages(header: str, lines: list[str]) -> list[str]:
         messages.append(current_msg)
 
     if not messages:
-        return [header + "\n📭 暂无有效内容"]
+        return [header + "\n<font color=\"comment\">📭 暂无有效内容</font>"]
 
     # 加上页码
     total_pages = len(messages)
     if total_pages > 1:
         for i in range(total_pages):
-            messages[i] += f"\n\n📄 ({i+1}/{total_pages})"
+            messages[i] += f"\n\n<font color=\"comment\">({i+1}/{total_pages})</font>"
 
     return messages
