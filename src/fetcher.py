@@ -441,13 +441,17 @@ def _fetch_github_trending(platform: PlatformConfig) -> list[NewsItem]:
 def _fetch_reddit(platform: PlatformConfig) -> list[NewsItem]:
     """Reddit Popular"""
     try:
-        # 使用更完整的移动端浏览器 Header 绕过 Reddit 403 屏蔽
+        # 使用极度仿真的移动端浏览器 Header，或者更换为稳定的第三方 JSON 聚合路由
         mobile_headers = {
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Language": "en-US,en;q=0.9",
             "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1"
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1"
         }
         resp = _request_with_retry(
             "https://www.reddit.com/r/popular.json?limit=30&t=day",

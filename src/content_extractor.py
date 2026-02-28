@@ -17,11 +17,26 @@ def extract_full_text(url: str) -> Optional[str]:
         
     try:
         # 1. 下载网页，增加自定义 User-Agent 避免 403
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+        
+        # 尝试先用自带工具库抓取
         downloaded = trafilatura.fetch_url(url)
-        # 如果原生 fetch 失败，某些站点可能需要更强的伪装
         if not downloaded:
-            logger.warning("无法下载网页内容: %s", url)
-            return None
+            # 如果被防御机制拦截导致下载失败，切换备用 requests 发包机制伪装绕过
+            import requests
+            try:
+                resp = requests.get(url, headers=headers, timeout=15)
+                resp.raise_for_status()
+                downloaded = resp.text
+            except Exception as http_err:
+                logger.warning("尝试代理请求依然无法下载网页内容: %s - %s", url, http_err)
+                return None
             
         # 2. 提取正文 (剔除广告、导航等干扰)
         # include_comments=False 避免评论干扰
