@@ -170,14 +170,12 @@ def _format_item(
     
     if use_markdown:
         hot_str = f" 🔥{item.hot_value}" if show_hot_value and item.hot_value else ""
-        title_md = f"[{title}]({item.url})" if (show_url and item.url) else title
-        parts.append(f"{rank_str}{title_md}{hot_str}")
+        # 移除超链接，仅保留标题文本
+        parts.append(f"{rank_str}{title}{hot_str}")
     else:
         hot_str = f" ({item.hot_value})" if show_hot_value and item.hot_value else ""
-        if show_url and item.url:
-            parts.append(f"{rank_str}{title}{hot_str} - {item.url}")
-        else:
-            parts.append(f"{rank_str}{title}{hot_str}")
+        # 移除 URL 后缀，仅保留标题文本
+        parts.append(f"{rank_str}{title}{hot_str}")
     
     # 摘要行
     if show_summary and item.content:

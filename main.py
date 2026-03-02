@@ -237,7 +237,7 @@ def main() -> None:
         messages = format_by_keyword(
             keyword_results,
             show_rank=config.get("display", {}).get("show_rank", True),
-            show_url=config.get("display", {}).get("show_url", True),
+            show_url=config.get("display", {}).get("show_url", False),
             show_hot_value=config.get("display", {}).get("show_hot_value", True),
             show_summary=show_summary,
             use_markdown=use_markdown,
@@ -249,7 +249,7 @@ def main() -> None:
         messages = format_by_platform(
             platform_results,
             show_rank=config.get("display", {}).get("show_rank", True),
-            show_url=config.get("display", {}).get("show_url", True),
+            show_url=config.get("display", {}).get("show_url", False),
             show_hot_value=config.get("display", {}).get("show_hot_value", True),
             max_per_platform=config.get("display", {}).get("max_items_per_platform", 10),
             show_summary=show_summary,
