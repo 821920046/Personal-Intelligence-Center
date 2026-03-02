@@ -157,7 +157,7 @@ display:
   # 是否显示热度值
   show_hot_value: true
   # 是否显示来源链接
-  show_url: true
+  show_url: false
   # 是否显示正文摘要（相关新闻主要内容）
   show_summary: true
   # 是否在控制台显示进度条
@@ -192,7 +192,7 @@ ai_summarization:
   # 是否开启 AI 智能摘要
   enabled: true
   # 模型名称 (gemini-1.5-flash, gpt-4o 等)
-  model: "gemini-1.5-flash"
+  model: "gemini-2.0-flash"
   # API 代理或基础 URL (留空则使用默认)
   base_url: ""
   # 是否生成全天候趋势总览 (今日洞察)
