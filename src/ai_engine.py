@@ -1,11 +1,12 @@
 """
 AI 引擎模块 - 提供通用的 LLM 调用能力 (支持 Gemini/OpenAI 兼容接口)
-内置指数退避重试机制，应对 429 限流。
+内置全局请求节流 + 指数退避重试机制，应对 Gemini 免费 API 速率限制。
 """
 
 import logging
 import os
 import time
+import threading
 from typing import Optional, List
 import requests
 
@@ -16,10 +17,17 @@ _GOOGLE_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 # 重试配置
 _MAX_RETRIES = 3
-_BASE_DELAY = 2.0  # 首次重试等待秒数，后续指数增长
+_BASE_DELAY = 5.0  # 首次重试等待秒数（增大以留足冷却时间）
+
+# 全局节流配置：Gemini 免费 API 限 15 RPM，保守设置每次请求至少间隔 4 秒
+_MIN_REQUEST_INTERVAL = 4.0
 
 # Embedding 模型候选列表（按优先级排列，依次尝试）
 _EMBEDDING_MODELS = ["text-embedding-004", "embedding-001"]
+
+# 全局节流锁和上次请求时间戳
+_throttle_lock = threading.Lock()
+_last_request_time = 0.0
 
 
 def _is_google_native(base_url: str) -> bool:
@@ -27,13 +35,27 @@ def _is_google_native(base_url: str) -> bool:
     return "googleapis.com" in base_url and not base_url.rstrip("/").endswith("/openai")
 
 
+def _throttle() -> None:
+    """全局请求节流：确保两次 API 调用之间至少间隔 _MIN_REQUEST_INTERVAL 秒"""
+    global _last_request_time
+    with _throttle_lock:
+        now = time.time()
+        elapsed = now - _last_request_time
+        if elapsed < _MIN_REQUEST_INTERVAL:
+            wait = _MIN_REQUEST_INTERVAL - elapsed
+            logger.debug("节流等待 %.1f 秒...", wait)
+            time.sleep(wait)
+        _last_request_time = time.time()
+
+
 def _post_with_retry(url: str, headers: dict, payload: dict, timeout: int = 30) -> requests.Response:
     """
-    带指数退避重试的 HTTP POST 请求。
+    带全局节流 + 指数退避重试的 HTTP POST 请求。
     仅对 429 (Too Many Requests) 和 5xx 进行重试。
     """
     last_resp = None
     for attempt in range(_MAX_RETRIES):
+        _throttle()  # 每次请求前先节流
         resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
         if resp.status_code == 429 or resp.status_code >= 500:
             delay = _BASE_DELAY * (2 ** attempt)
