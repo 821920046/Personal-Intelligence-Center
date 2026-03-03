@@ -1,6 +1,7 @@
 """
-AI 引擎模块 - 提供通用的 LLM 调用能力 (支持 Gemini/OpenAI 兼容接口)
-内置全局请求节流 + 指数退避重试机制，应对 Gemini 免费 API 速率限制。
+AI 引擎模块 - 提供通用的 LLM 调用能力
+支持 SiliconFlow / Gemini / OpenAI 兼容接口
+内置全局请求节流 + 指数退避重试机制
 """
 
 import logging
@@ -12,18 +13,24 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# Google 原生 API v1beta 基础路径
+# ── 默认配置 ──
+# SiliconFlow 作为默认平台（免费、中文能力强、速率宽松）
+_DEFAULT_BASE_URL = "https://api.siliconflow.cn/v1"
+_DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+
+# SiliconFlow 免费 Embedding 模型（中文优化）
+_SILICONFLOW_EMBEDDING_MODEL = "BAAI/bge-large-zh-v1.5"
+
+# Google 原生 API v1beta 基础路径（仅在使用 Google API 时生效）
 _GOOGLE_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
+_GOOGLE_EMBEDDING_MODELS = ["text-embedding-004", "embedding-001"]
 
 # 重试配置
 _MAX_RETRIES = 3
-_BASE_DELAY = 5.0  # 首次重试等待秒数（增大以留足冷却时间）
+_BASE_DELAY = 3.0
 
-# 全局节流配置：Gemini 免费 API 限 15 RPM，保守设置每次请求至少间隔 4 秒
-_MIN_REQUEST_INTERVAL = 4.0
-
-# Embedding 模型候选列表（按优先级排列，依次尝试）
-_EMBEDDING_MODELS = ["text-embedding-004", "embedding-001"]
+# 全局节流配置（SiliconFlow 比 Gemini 宽松，1 秒即可）
+_MIN_REQUEST_INTERVAL = 1.0
 
 # 全局节流锁和上次请求时间戳
 _throttle_lock = threading.Lock()
@@ -31,64 +38,66 @@ _last_request_time = 0.0
 
 
 def _is_google_native(base_url: str) -> bool:
-    """判断是否走 Google 原生协议（googleapis 域名且不含 /openai 后缀）"""
+    """判断是否走 Google 原生协议"""
     return "googleapis.com" in base_url and not base_url.rstrip("/").endswith("/openai")
 
 
 def _throttle() -> None:
-    """全局请求节流：确保两次 API 调用之间至少间隔 _MIN_REQUEST_INTERVAL 秒"""
+    """全局请求节流"""
     global _last_request_time
     with _throttle_lock:
         now = time.time()
         elapsed = now - _last_request_time
         if elapsed < _MIN_REQUEST_INTERVAL:
             wait = _MIN_REQUEST_INTERVAL - elapsed
-            logger.debug("节流等待 %.1f 秒...", wait)
             time.sleep(wait)
         _last_request_time = time.time()
 
 
 def _post_with_retry(url: str, headers: dict, payload: dict, timeout: int = 30) -> requests.Response:
-    """
-    带全局节流 + 指数退避重试的 HTTP POST 请求。
-    仅对 429 (Too Many Requests) 和 5xx 进行重试。
-    """
+    """带全局节流 + 指数退避重试的 HTTP POST 请求"""
     last_resp = None
     for attempt in range(_MAX_RETRIES):
-        _throttle()  # 每次请求前先节流
+        _throttle()
         resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
         if resp.status_code == 429 or resp.status_code >= 500:
             delay = _BASE_DELAY * (2 ** attempt)
             logger.warning(
-                "请求返回 %d，%d/%d 次重试，等待 %.1f 秒... (%s)",
-                resp.status_code, attempt + 1, _MAX_RETRIES, delay, url,
+                "请求返回 %d，%d/%d 次重试，等待 %.1f 秒...",
+                resp.status_code, attempt + 1, _MAX_RETRIES, delay,
             )
             last_resp = resp
             time.sleep(delay)
             continue
         return resp
-    # 所有重试耗尽，返回最后一次响应
     return last_resp  # type: ignore[return-value]
 
 
 class AIEngine:
-    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.0-flash", base_url: Optional[str] = None):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = _DEFAULT_MODEL,
+        base_url: Optional[str] = None,
+    ):
         self.api_key = api_key or os.environ.get("AI_API_KEY")
         self.model = model
         raw_url = base_url or os.environ.get("AI_BASE_URL", "")
-        self.base_url = raw_url.rstrip("/") if raw_url else _GOOGLE_API_BASE
-        # 缓存已验证可用的 Embedding 模型名称
+        self.base_url = raw_url.rstrip("/") if raw_url else _DEFAULT_BASE_URL
         self._verified_embedding_model: Optional[str] = None
         logger.info("AI 引擎初始化: model=%s, base_url=%s", self.model, self.base_url)
 
+    # ──────────────────── 文本生成 ────────────────────
+
     def generate_content(self, prompt: str) -> Optional[str]:
-        """生成文本内容（内置重试机制）"""
+        """生成文本内容"""
         if not self.api_key:
             logger.warning("AI_API_KEY 未设置，跳过 AI 处理")
             return None
 
         try:
             if _is_google_native(self.base_url):
+                # Google 原生协议
                 url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
                 headers = {"Content-Type": "application/json"}
                 payload = {
@@ -96,23 +105,25 @@ class AIEngine:
                     "generationConfig": {"temperature": 0.7},
                 }
             else:
+                # OpenAI 兼容协议（SiliconFlow / DeepSeek / 自建反代等）
                 url = f"{self.base_url}/chat/completions"
                 headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-                payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.7}
+                payload = {
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7,
+                }
 
-            logger.debug("AI generate_content 请求: %s", url)
             resp = _post_with_retry(url, headers, payload, timeout=30)
 
-            if resp.status_code == 404:
-                logger.error("AI 生成内容失败: 404 端点未找到 (%s)", url)
-                return None
-            if resp.status_code == 429:
-                logger.error("AI 生成内容失败: 429 限流，已用尽重试次数")
+            if resp.status_code in (404, 429):
+                logger.error("AI 生成内容失败: %d (%s)", resp.status_code, url)
                 return None
 
             resp.raise_for_status()
             data = resp.json()
 
+            # 兼容 Google 原生和 OpenAI 两种返回格式
             if "candidates" in data:
                 return data["candidates"][0]["content"]["parts"][0]["text"].strip()
             elif "choices" in data:
@@ -123,55 +134,68 @@ class AIEngine:
             logger.error("AI 生成内容失败: %s", e)
             return None
 
+    # ──────────────────── 向量 Embedding ────────────────────
+
     def get_embedding(self, text: str) -> Optional[List[float]]:
-        """获取文本的向量表示（自动尝试多个 Embedding 模型）"""
+        """获取文本的向量表示"""
         if not self.api_key:
             return None
 
         try:
             if _is_google_native(self.base_url) or (
-                "googleapis.com" in self.base_url and self.base_url.rstrip("/").endswith("/openai")
+                "googleapis.com" in self.base_url
             ):
-                native_base = self.base_url.rstrip("/").replace("/openai", "")
-                headers = {"Content-Type": "application/json"}
-                payload = {"content": {"parts": [{"text": text}]}}
-
-                # 如果已验证过可用模型，直接使用
-                if self._verified_embedding_model:
-                    return self._call_google_embedding(
-                        native_base, self._verified_embedding_model, headers, payload
-                    )
-
-                # 依次尝试候选模型
-                for emb_model in _EMBEDDING_MODELS:
-                    result = self._call_google_embedding(native_base, emb_model, headers, payload)
-                    if result is not None:
-                        self._verified_embedding_model = emb_model
-                        logger.info("✅ Embedding 模型验证成功: %s", emb_model)
-                        return result
-                    logger.warning("Embedding 模型 %s 不可用，尝试下一个...", emb_model)
-
-                logger.error("所有 Embedding 模型均不可用: %s", _EMBEDDING_MODELS)
-                return None
+                # Google 原生 Embedding（多模型探测）
+                return self._get_google_embedding(text)
             else:
-                url = f"{self.base_url}/embeddings"
-                headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-                payload = {"input": text, "model": "text-embedding-3-small"}
-
-                resp = _post_with_retry(url, headers, payload, timeout=20)
-                if resp.status_code in (404, 429):
-                    logger.error("获取 Embedding 失败: %d (%s)", resp.status_code, url)
-                    return None
-
-                resp.raise_for_status()
-                data = resp.json()
-                if "data" in data and len(data["data"]) > 0:
-                    return data["data"][0]["embedding"]
-                return None
+                # OpenAI 兼容 Embedding（SiliconFlow / 其他）
+                return self._get_openai_embedding(text)
 
         except Exception as e:
             logger.error("获取 Embedding 失败: %s", e)
             return None
+
+    def _get_openai_embedding(self, text: str) -> Optional[List[float]]:
+        """通过 OpenAI 兼容接口获取 Embedding（SiliconFlow 等）"""
+        # SiliconFlow 使用 BAAI/bge-large-zh-v1.5（免费中文向量模型）
+        emb_model = _SILICONFLOW_EMBEDDING_MODEL if "siliconflow" in self.base_url else "text-embedding-3-small"
+
+        url = f"{self.base_url}/embeddings"
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        payload = {"input": text, "model": emb_model}
+
+        resp = _post_with_retry(url, headers, payload, timeout=20)
+        if resp.status_code in (404, 429):
+            logger.error("获取 Embedding 失败: %d (%s)", resp.status_code, url)
+            return None
+
+        resp.raise_for_status()
+        data = resp.json()
+        if "data" in data and len(data["data"]) > 0:
+            return data["data"][0]["embedding"]
+        return None
+
+    def _get_google_embedding(self, text: str) -> Optional[List[float]]:
+        """通过 Google 原生接口获取 Embedding（多模型探测）"""
+        native_base = self.base_url.rstrip("/").replace("/openai", "")
+        headers = {"Content-Type": "application/json"}
+        payload = {"content": {"parts": [{"text": text}]}}
+
+        if self._verified_embedding_model:
+            return self._call_google_embedding(
+                native_base, self._verified_embedding_model, headers, payload
+            )
+
+        for emb_model in _GOOGLE_EMBEDDING_MODELS:
+            result = self._call_google_embedding(native_base, emb_model, headers, payload)
+            if result is not None:
+                self._verified_embedding_model = emb_model
+                logger.info("✅ Embedding 模型验证成功: %s", emb_model)
+                return result
+            logger.warning("Embedding 模型 %s 不可用，尝试下一个...", emb_model)
+
+        logger.error("所有 Google Embedding 模型均不可用")
+        return None
 
     def _call_google_embedding(
         self, native_base: str, emb_model: str, headers: dict, payload: dict
@@ -181,7 +205,7 @@ class AIEngine:
         resp = _post_with_retry(url, headers, payload, timeout=20)
 
         if resp.status_code == 404:
-            return None  # 模型不存在，交给调用方尝试下一个
+            return None
         if resp.status_code == 429:
             logger.warning("Embedding 请求被限流 (429)，模型: %s", emb_model)
             return None
