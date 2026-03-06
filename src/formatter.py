@@ -191,15 +191,21 @@ def _format_item(
     # 清洗标题首尾空格和换行
     title = re.sub(r'<[^>]+>', '', item.title).replace("\n", " ").strip()
     
+    # 带圈数字序号映射 ①-⑳
+    CIRCLED_NUMS = "⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
+    
+    if show_rank and 1 <= item.rank <= 20:
+        rank_str = f"{CIRCLED_NUMS[item.rank]} "
+    elif show_rank and item.rank > 0:
+        rank_str = f"{item.rank}. "
+    else:
+        rank_str = "◆ "
+    
     if use_markdown:
-        # Markdown 模式：序号加粗 + 标题 + 热度独立标签
-        rank_str = f"**{item.rank}.** " if show_rank and item.rank > 0 else "◆ "
         parts.append(f"{rank_str}{title}")
         if show_hot_value and item.hot_value:
             parts.append(f"   📊 `{item.hot_value}`")
     else:
-        # 文本模式：带层级符号
-        rank_str = f"[{item.rank}] " if show_rank and item.rank > 0 else "◆ "
         hot_str = f"  ({item.hot_value})" if show_hot_value and item.hot_value else ""
         parts.append(f"{rank_str}{title}{hot_str}")
     
