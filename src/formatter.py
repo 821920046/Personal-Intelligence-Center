@@ -52,7 +52,7 @@ def _build_header(title: str, now: str, daily_insight: str | None, use_markdown:
         if daily_insight:
             header += f"\n\n💡 **今日洞察**\n> {daily_insight}"
     else:
-        header = f"════════════════════\n📡 {title}\n⏰ {now}\n════════════════════"
+        header = f"━━━━━━━━━━━━━━━━━━━━\n📡 {title}\n⏰ {now}\n━━━━━━━━━━━━━━━━━━━━"
         if daily_insight:
             header += f"\n\n💡 今日洞察：\n{daily_insight}"
     return header
@@ -89,19 +89,16 @@ def format_by_keyword(
             if group_summaries and keyword_label in group_summaries:
                 lines.append(f"> 🤖 {_safe_byte_truncate(group_summaries[keyword_label], 200)}")
         else:
-            lines.append(f"\n────────────────")
-            lines.append(f"🔥 {keyword_label}  | {len(items)}条")
+            lines.append(f"\n─────────────────")
+            lines.append(f"🔥 {keyword_label} ┃ {len(items)}条")
             if group_summaries and keyword_label in group_summaries:
-                lines.append(f"  [AI] {group_summaries[keyword_label]}")
+                lines.append(f"🤖 AI洞察：{group_summaries[keyword_label]}")
         
         for item in items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
 
     # 结束装饰
-    if use_markdown:
-        lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    else:
-        lines.append("\n════════════════════")
+    lines.append("\n━━━━━━━━━━━━━━━━━━━━")
 
     return _split_to_messages(header, lines)
 
@@ -143,8 +140,8 @@ def format_by_platform(
             lines.append(f"\n───────────────")
             lines.append(f"{icon} **{display_name}**  ┃ {len(display_items)}条")
         else:
-            lines.append(f"\n────────────────")
-            lines.append(f"{icon} {display_name}  | {len(display_items)}条")
+            lines.append(f"\n─────────────────")
+            lines.append(f"{icon} {display_name} ┃ {len(display_items)}条")
             
         for item in display_items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
@@ -185,15 +182,14 @@ def _format_item(
     show_summary: bool = True,
     use_markdown: bool = True
 ) -> str:
-    """格式化单条新闻条目 - 清晰层级排版"""
+    """格式化单条新闻条目 - 针对微信端优化的多行排版"""
     parts: list[str] = []
     
-    # 清洗标题首尾空格和换行
+    # 清洗标题
     title = re.sub(r'<[^>]+>', '', item.title).replace("\n", " ").strip()
     
-    # 带圈数字序号映射 ①-⑳
+    # 1. 序号与标题
     CIRCLED_NUMS = "⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
-    
     if show_rank and 1 <= item.rank <= 20:
         rank_str = f"{CIRCLED_NUMS[item.rank]} "
     elif show_rank and item.rank > 0:
@@ -201,19 +197,20 @@ def _format_item(
     else:
         rank_str = "◆ "
     
-    if use_markdown:
-        parts.append(f"{rank_str}{title}")
-        if show_hot_value and item.hot_value:
+    # 标题行（如果是 Keyword 模式，尝试加上来源）
+    source_suffix = f" 〖{item.platform}〗" if item.platform and len(item.platform) < 10 else ""
+    parts.append(f"{rank_str}{title}{source_suffix}")
+
+    # 2. 热度行 (针对 Text 模式独立一行)
+    if show_hot_value and item.hot_value:
+        if use_markdown:
             parts.append(f"   📊 `{item.hot_value}`")
-    else:
-        hot_str = f"  ({item.hot_value})" if show_hot_value and item.hot_value else ""
-        parts.append(f"{rank_str}{title}{hot_str}")
-    
-    # 摘要行
+        else:
+            parts.append(f"   📊 {item.hot_value}")
+
+    # 3. 摘要行
     if show_summary and item.content:
         summary = re.sub(r'<[^>]+>', '', item.content).replace("\n", " ").strip()
-        
-        # 截断摘要到约 100 字节，更短更精练
         if len(summary.encode('utf-8')) > 120:
             summary = _safe_byte_truncate(summary, 110) + "..."
             
@@ -221,10 +218,10 @@ def _format_item(
             if use_markdown:
                 parts.append(f"> {summary}")
             else:
-                parts.append(f"   └ {summary}")
+                parts.append(f"   💬 {summary}")
     
-    # 条目之间增加空行提升呼吸感
-    return "\n".join(parts)
+    # 增加空行，让条目之间有呼吸感
+    return "\n".join(parts) + "\n"
 
 
 def _split_to_messages(header: str, lines: list[str]) -> list[str]:
