@@ -35,8 +35,27 @@ PLATFORM_ICONS = {
     "techcrunch": "⚡",
     "theverge": "🌐",
     "reuters": "⚖️",
-    "bbc": "📻"
+    "bbc": "📻",
+    "cnn": "📺",
+    "nytimes": "🗞️",
+    "guardian": "🛡️",
+    "apnews": "🔔",
+    "nhk": "🇯🇵",
+    "wsj": "💹",
 }
+
+
+def _build_header(title: str, now: str, daily_insight: str | None, use_markdown: bool) -> str:
+    """构建消息头部（含装饰带和洞察）"""
+    if use_markdown:
+        header = f"━━━━━━━━━━━━━━━━━━━━\n📡 **{title}**\n⏰ {now}\n━━━━━━━━━━━━━━━━━━━━"
+        if daily_insight:
+            header += f"\n\n💡 **今日洞察**\n> {daily_insight}"
+    else:
+        header = f"════════════════════\n📡 {title}\n⏰ {now}\n════════════════════"
+        if daily_insight:
+            header += f"\n\n💡 今日洞察：\n{daily_insight}"
+    return header
 
 
 def format_by_keyword(
@@ -56,30 +75,33 @@ def format_by_keyword(
         return ["📭 Personal-Intelligence-Center - 暂无匹配关键词的热点"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
-    if use_markdown:
-        header = f"📡 **Personal-Intelligence-Center 热点速递**\n⏰ {now}\n"
-        if daily_insight:
-            header += f"\n💡 **今日洞察**\n{daily_insight}\n"
-    else:
-        header = f"📡 Personal-Intelligence-Center 热点速递\n⏰ {now}\n"
-        if daily_insight:
-            header += f"\n💡 今日洞察：{daily_insight}\n"
+    header = _build_header("Personal-Intelligence-Center 热点速递", now, daily_insight, use_markdown)
 
     lines: list[str] = []
     for keyword_label, items in keyword_results.items():
         if not items:
             continue
+
+        # 分组分隔线 + 标题
         if use_markdown:
-            lines.append(f"\n🔥 **{keyword_label}** ({len(items)}条)")
+            lines.append(f"\n───────────────")
+            lines.append(f"🔥 **{keyword_label}**  ┃ {len(items)}条")
             if group_summaries and keyword_label in group_summaries:
-                lines.append(f"🤖 AI 综述: {_safe_byte_truncate(group_summaries[keyword_label], 200)}")
+                lines.append(f"> 🤖 {_safe_byte_truncate(group_summaries[keyword_label], 200)}")
         else:
-            lines.append(f"\n🔥 {keyword_label} ({len(items)}条)")
+            lines.append(f"\n────────────────")
+            lines.append(f"🔥 {keyword_label}  | {len(items)}条")
             if group_summaries and keyword_label in group_summaries:
-                lines.append(f"[AI 综述] {group_summaries[keyword_label]}")
+                lines.append(f"  [AI] {group_summaries[keyword_label]}")
         
         for item in items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
+
+    # 结束装饰
+    if use_markdown:
+        lines.append("\n━━━━━━━━━━━━━━━━━━━━")
+    else:
+        lines.append("\n════════════════════")
 
     return _split_to_messages(header, lines)
 
@@ -102,14 +124,7 @@ def format_by_platform(
         return ["📭 Personal-Intelligence-Center - 暂无热点数据"]
 
     now = datetime.now(BJT).strftime("%Y-%m-%d %H:%M")
-    if use_markdown:
-        header = f"📡 **Personal-Intelligence-Center 平台热搜**\n⏰ {now}\n"
-        if daily_insight:
-            header += f"\n💡 **今日洞察**\n{daily_insight}\n"
-    else:
-        header = f"📡 Personal-Intelligence-Center 平台热搜\n⏰ {now}\n"
-        if daily_insight:
-            header += f"\n💡 今日洞察：{daily_insight}\n"
+    header = _build_header("Personal-Intelligence-Center 平台热搜", now, daily_insight, use_markdown)
 
     lines: list[str] = []
     for platform_id, items in platform_results.items():
@@ -122,13 +137,23 @@ def format_by_platform(
         )
         
         display_items = items[:max_per_platform]
+
+        # 分组分隔线 + 平台标题
         if use_markdown:
-            lines.append(f"\n{icon} **{display_name}**")
+            lines.append(f"\n───────────────")
+            lines.append(f"{icon} **{display_name}**  ┃ {len(display_items)}条")
         else:
-            lines.append(f"\n{icon} {display_name}")
+            lines.append(f"\n────────────────")
+            lines.append(f"{icon} {display_name}  | {len(display_items)}条")
             
         for item in display_items:
             lines.append(_format_item(item, show_rank, show_url, show_hot_value, show_summary, use_markdown))
+
+    # 结束装饰
+    if use_markdown:
+        lines.append("\n━━━━━━━━━━━━━━━━━━━━")
+    else:
+        lines.append("\n════════════════════")
 
     return _split_to_messages(header, lines)
 
@@ -160,21 +185,22 @@ def _format_item(
     show_summary: bool = True,
     use_markdown: bool = True
 ) -> str:
-    """格式化单条新闻条目 - 轻量化排版"""
+    """格式化单条新闻条目 - 清晰层级排版"""
     parts: list[str] = []
-    
-    rank_str = f"{item.rank}. " if show_rank and item.rank > 0 else "• "
     
     # 清洗标题首尾空格和换行
     title = re.sub(r'<[^>]+>', '', item.title).replace("\n", " ").strip()
     
     if use_markdown:
-        hot_str = f" 🔥{item.hot_value}" if show_hot_value and item.hot_value else ""
-        # 移除超链接，仅保留标题文本
-        parts.append(f"{rank_str}{title}{hot_str}")
+        # Markdown 模式：序号加粗 + 标题 + 热度独立标签
+        rank_str = f"**{item.rank}.** " if show_rank and item.rank > 0 else "◆ "
+        parts.append(f"{rank_str}{title}")
+        if show_hot_value and item.hot_value:
+            parts.append(f"   📊 `{item.hot_value}`")
     else:
-        hot_str = f" ({item.hot_value})" if show_hot_value and item.hot_value else ""
-        # 移除 URL 后缀，仅保留标题文本
+        # 文本模式：带层级符号
+        rank_str = f"[{item.rank}] " if show_rank and item.rank > 0 else "◆ "
+        hot_str = f"  ({item.hot_value})" if show_hot_value and item.hot_value else ""
         parts.append(f"{rank_str}{title}{hot_str}")
     
     # 摘要行
@@ -187,10 +213,11 @@ def _format_item(
             
         if summary:
             if use_markdown:
-                parts.append(f"   > {summary}")
+                parts.append(f"> {summary}")
             else:
                 parts.append(f"   └ {summary}")
-        
+    
+    # 条目之间增加空行提升呼吸感
     return "\n".join(parts)
 
 

@@ -145,6 +145,55 @@ platforms:
     enabled: false
     max_items: 15
 
+  - id: "cnn-world"
+    name: "CNN 世界新闻"
+    type: "rss"
+    url: "http://rss.cnn.com/rss/edition_world.rss"
+    enabled: true
+    max_items: 15
+
+  - id: "nytimes-world"
+    name: "纽约时报"
+    type: "rss"
+    url: "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
+    enabled: true
+    max_items: 15
+
+  - id: "reuters"
+    name: "路透社"
+    type: "rss"
+    url: "https://www.reutersagency.com/feed/"
+    enabled: true
+    max_items: 15
+
+  - id: "guardian-world"
+    name: "卫报世界版"
+    type: "rss"
+    url: "https://www.theguardian.com/world/rss"
+    enabled: true
+    max_items: 15
+
+  - id: "apnews"
+    name: "美联社"
+    type: "rss"
+    url: "https://rsshub.app/apnews/topics/world-news"
+    enabled: true
+    max_items: 15
+
+  - id: "nhk-world"
+    name: "NHK World"
+    type: "rss"
+    url: "https://www3.nhk.or.jp/nhkworld/en/news/feeds/"
+    enabled: true
+    max_items: 15
+
+  - id: "wsj-world"
+    name: "华尔街日报"
+    type: "rss"
+    url: "https://feeds.a.dj.com/rss/RSSWorldNews.xml"
+    enabled: true
+    max_items: 15
+
 
 # --------------------------------------------------
 # 显示配置
