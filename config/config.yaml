@@ -270,7 +270,7 @@ notifications:
   # 企业微信 (WeWork) - 默认保持旧环境变量 WEWORK_WEBHOOK_URL
   wework:
     enabled: true
-    msg_type: "markdown"
+    msg_type: "text"
 
   # Bark (iOS 推送)
   bark:
